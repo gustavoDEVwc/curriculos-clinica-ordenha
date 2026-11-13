@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Gestor: único usuário que enxerga e altera tudo
+    function gestor() {
+      return request.auth != null && request.auth.uid == 'GDgIeOmpo3RRFjNdDhnXg6YdGXx1';
+    }
+    function dono() {
+      return request.auth != null && resource.data.owner == request.auth.uid;
+    }
+    function novoDono() {
+      return request.auth != null && request.resource.data.owner == request.auth.uid;
+    }
+
+    match /clientes/{id} {
+      allow read: if gestor() || dono();
+      allow create: if novoDono();
+      allow update: if (gestor() || dono()) && request.resource.data.owner == resource.data.owner;
+      allow delete: if gestor() || dono();
+    }
+
+    match /orcamentos/{id} {
+      allow read: if gestor() || dono();
+      allow create: if novoDono();
+      allow update: if (gestor() || dono()) && request.resource.data.owner == resource.data.owner;
+      allow delete: if gestor() || dono();
+    }
+  }
+}
