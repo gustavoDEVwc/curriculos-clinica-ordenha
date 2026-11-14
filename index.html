@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Clínica da Ordenha</title>
+<meta name="theme-color" content="#007aff">
 <link rel="stylesheet" href="estilo.css">
+<script>try{var t=localStorage.getItem("clinica_ordenha_v1_tema");if(t)document.documentElement.dataset.tema=t}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -12,14 +14,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
-<header>Clínica da Ordenha - controle de clientes</header>
+<header>Clínica da Ordenha</header>
 <nav id="nav"></nav>
 <div id="menu" hidden></div>
+<div id="notif" hidden></div>
 <main id="app"></main>
 <script src="config.js"></script>
 <script src="dados.js"></script>
 <script src="orcamentos.js"></script>
 <script src="gestor.js"></script>
+<script src="visitas.js"></script>
+<script src="notificacoes.js"></script>
+<script src="tema.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

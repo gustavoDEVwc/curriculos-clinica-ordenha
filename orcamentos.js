@@ -4,7 +4,7 @@ const OST=['Fechado','Não fechou','Aguardando'];
 const OF=[
  ['vendedor','Vendedor','s',1,VEND],['data','Data','d',1],['objetivo','Objetivo do orçamento','s',1,OBJ],
  ['produtos','Produtos','a',1],['valor','Valor (R$)','n',1],
- ['fechamento','Fechamento','s',0,YN],['motivo','Não fechou, motivo?','t'],['retorno','Data de retorno','d']];
+ ['fechamento','Fechamento','s',0,YN],['motivo','Não fechou, motivo?','t'],['retorno','Retorno do orçamento','d']];
 
 // Comissão sobre o fechamento:
 // Equipamento = 1,5% do valor · Produtos recorrentes = 3% do valor
@@ -67,5 +67,17 @@ function gorc(){
  const val=(a,f)=>Object.entries(grp(a,f)).map(([k,x])=>[k,sum(x,o=>o.valor)]).sort((x,y)=>y[1]-x[1]);
  return`<div class="kpis">${kp('orçamentos',L.length)}${kp('valor orçado',brl(sum(L,o=>o.valor)))}${kp('fechados',`${F.length} (${Math.round(100*F.length/L.length)}%)`)}${kp('valor fechado',brl(sum(F,o=>o.valor)))}${kp('comissão dos fechados',brl(sum(F,o=>o.comissao_valor)))}</div>`
  +`<div class="two">${pbox('Orçamentos por status',pairs(L,stt))}${pbox('Valor por objetivo (R$)',val(L,o=>o.objetivo))}${pbox('Valor por vendedor (R$)',val(L,o=>o.vendedor))}</div>`
- +box('Andamento dos orçamentos',tbl(['Data','Vendedor','Produtor','Objetivo','Valor','Status','Retorno','Motivo','Comissão'],L.map(o=>[br(o.data),esc(o.vendedor),esc(o.produtor_nome),esc(o.objetivo),brl(o.valor),stt(o),stt(o)=='Não fechou'&&o.retorno?(o.retorno<hoje()?'⚠ ':'')+br(o.retorno):'',esc(o.motivo),stt(o)=='Fechado'?brl(o.comissao_valor):'—'])));
+ +box('Andamento dos orçamentos',andamento(L));
+}
+
+// Tabela no computador; no celular vira lista de cartões. Clicar abre a janela com os detalhes.
+const pillO=o=>`<span class="pill ${{'Fechado':'ok','Não fechou':'nf'}[stt(o)]||''}">${stt(o)}</span>`;
+const andamento=L=>`<div class="so-d sc"><table><thead><tr>${['Data','Vendedor','Produtor','Objetivo','Valor','Status','Retorno do orç.','Comissão'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${L.map(o=>`<tr class="clk" data-ok="${o.id}"><td>${br(o.data)}</td><td>${esc(o.vendedor)}</td><td>${esc(o.produtor_nome)}</td><td>${esc(o.objetivo)}</td><td>${brl(o.valor)}</td><td>${stt(o)}</td><td>${stt(o)=='Não fechou'&&o.retorno?(o.retorno<hoje()?'⚠ ':'')+br(o.retorno):''}</td><td>${stt(o)=='Fechado'?brl(o.comissao_valor):'—'}</td></tr>`).join('')}</tbody></table></div>`
+ +`<div class="so-m cards">${L.map(o=>`<div class="card" data-ok="${o.id}"><span><b>${esc(o.produtor_nome)}</b> ${pillO(o)}</span><small>${br(o.data)} · ${brl(o.valor)} · ${esc(o.vendedor)}</small></div>`).join('')}</div><p class="m">Toque num orçamento para ver todos os detalhes.</p>`;
+function abrirOrc(id){
+ const o=DB.orcamentos.find(x=>x.id==id);if(!o)return;
+ const s=stt(o),D=[['Data',br(o.data)],['Vendedor',o.vendedor],['Objetivo',o.objetivo],['Valor',brl(o.valor)],['Status',s]];
+ if(s=='Fechado')D.push(['Comissão',brl(o.comissao_valor)]);
+ if(s=='Não fechou'&&o.retorno)D.push(['Retorno do orçamento',br(o.retorno)]);
+ abrirModal(`<h2>${esc(o.produtor_nome)}</h2><p class="m">${esc(o.cidade)}</p><dl class="dl">${D.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><h3>Produtos</h3><p class="txt">${esc(o.produtos)||'—'}</p>`+(s=='Não fechou'?`<h3>Motivo</h3><p class="txt">${esc(o.motivo)||'Não informado'}</p>`:''));
 }
