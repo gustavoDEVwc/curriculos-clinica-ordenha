@@ -1,0 +1,15 @@
+{
+  "name": "Clínica da Ordenha",
+  "short_name": "Clínica Ordenha",
+  "description": "Cadastro de clientes, visitas e orçamentos",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#007aff",
+  "theme_color": "#007aff",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

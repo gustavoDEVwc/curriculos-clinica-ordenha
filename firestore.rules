@@ -6,25 +6,54 @@ service cloud.firestore {
     function gestor() {
       return request.auth != null && request.auth.uid == 'GDgIeOmpo3RRFjNdDhnXg6YdGXx1';
     }
+    function logado() {
+      return request.auth != null;
+    }
+    // dono = vendedor que cadastrou o registro
     function dono() {
       return request.auth != null && resource.data.owner == request.auth.uid;
     }
     function novoDono() {
       return request.auth != null && request.resource.data.owner == request.auth.uid;
     }
+    function mesmoDono() {
+      return request.resource.data.owner == resource.data.owner;
+    }
 
+    // Clientes: todos os logados veem; só o dono e o gestor alteram
     match /clientes/{id} {
-      allow read: if gestor() || dono();
-      allow create: if novoDono();
-      allow update: if (gestor() || dono()) && request.resource.data.owner == resource.data.owner;
+      allow read: if logado();
+      allow create: if gestor() || novoDono();
+      allow update: if gestor() || (dono() && mesmoDono()); // só o gestor pode mudar o dono (transferir)
       allow delete: if gestor() || dono();
     }
 
+    // Visitas e orçamentos: cada vendedor vê e altera só os seus; o gestor vê e altera tudo
+    match /visitas/{id} {
+      allow read: if gestor() || dono();
+      allow create: if gestor() || novoDono();
+      allow update: if gestor() || (dono() && mesmoDono()); // só o gestor pode mudar o dono (transferir)
+      allow delete: if gestor() || dono();
+    }
     match /orcamentos/{id} {
       allow read: if gestor() || dono();
-      allow create: if novoDono();
-      allow update: if (gestor() || dono()) && request.resource.data.owner == resource.data.owner;
+      allow create: if gestor() || novoDono();
+      allow update: if gestor() || (dono() && mesmoDono()); // só o gestor pode mudar o dono (transferir)
       allow delete: if gestor() || dono();
+    }
+
+    // Registro de login (e-mail → uid): cada um grava o próprio; só o gestor lê todos
+    match /usuarios/{uid} {
+      allow read: if gestor() || (logado() && request.auth.uid == uid);
+      allow write: if logado() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email'])
+        && request.resource.data.email == request.auth.token.email.lower();
+    }
+
+    // Vínculo e-mail → vendedor: todos leem, só o gestor grava
+    match /config/{id} {
+      allow read: if logado();
+      allow write: if gestor();
     }
   }
 }

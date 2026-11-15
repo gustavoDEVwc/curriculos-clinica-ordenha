@@ -17,7 +17,7 @@ const brl=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const stt=o=>o.fechamento=='Sim'?'Fechado':o.fechamento=='Não'?'Não fechou':'Aguardando';
 const lbl=c=>`${c.nome} — ${c.cidade}`;
 const nrm=x=>String(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-const prodSel=s=>DB.clientes.find(c=>nrm(lbl(c))==nrm(s));
+const prodSel=s=>meusClientes().find(c=>nrm(lbl(c))==nrm(s));
 
 function orcList(){
  const L=DB.orcamentos.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
@@ -26,9 +26,9 @@ function orcList(){
 }
 
 function orcForm(){
- const o=orcCur,P=DB.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome)),pr=P.find(c=>c.id==o.produtor_id),F=k=>OF.find(f=>f[0]==k);
+ const o=orcCur,P=meusClientes().slice().sort((a,b)=>a.nome.localeCompare(b.nome)),pr=DB.clientes.find(c=>c.id==o.produtor_id),F=k=>OF.find(f=>f[0]==k);
  return`<form id="of"><section><h2>${o.id?'Editar orçamento':'Novo orçamento'}</h2>
- <div class="g">${inp(F('vendedor'),o.vendedor)}${inp(F('data'),o.data||hoje())}${inp(F('objetivo'),o.objetivo)}
+ <div class="g">${inp(F('vendedor'),o.vendedor||Auth.vendedor)}${inp(F('data'),o.data||hoje())}${inp(F('objetivo'),o.objetivo)}
  <label>Produtor *<input name="produtor" list="dl_prod" autocomplete="off" placeholder="Digite para buscar o produtor" value="${esc(pr?lbl(pr):'')}" required></label></div>
  <datalist id="dl_prod">${P.map(c=>`<option value="${esc(lbl(c))}">`).join('')}</datalist>
  <p><button type="button" data-act="ocnovo">+ Cadastrar novo cliente</button></p></section>
@@ -40,6 +40,7 @@ function orcForm(){
 // Só libera o restante do formulário depois de escolher um produtor da lista
 function osync(){
  const f=$('#of').elements,pr=prodSel(f.produtor.value),nao=f.fechamento.value=='Não';
+ f.vendedor.disabled=true; // o vendedor é sempre o do login
  $('#ores').hidden=!pr;
  [...$('#ores').querySelectorAll('input,select,textarea')].forEach(x=>x.disabled=!pr);
  ['motivo','retorno'].forEach(k=>{f[k].closest('label').style.display=nao?'':'none';if(!nao)f[k].value=''});
@@ -53,7 +54,7 @@ function salvarOrc(e){
  const f=e.target.elements,pr=prodSel(f.produtor.value);
  if(!pr){f.produtor.setCustomValidity('Selecione um produtor da lista');f.produtor.reportValidity();return}
  const o=ocollect();
- Object.assign(o,{id:orcCur.id||uid(),owner:orcCur.owner||Auth.user.uid,produtor_nome:pr.nome,cidade:pr.cidade,comissao_valor:+comis(o.objetivo,+o.valor).toFixed(2),atualizado_em:new Date().toISOString()});
+ Object.assign(o,{id:orcCur.id||uid(),owner:orcCur.owner||Auth.user.uid,vendedor:orcCur.vendedor||Auth.vendedor,produtor_nome:pr.nome,cidade:pr.cidade,comissao_valor:+comis(o.objetivo,+o.valor).toFixed(2),atualizado_em:new Date().toISOString()});
  Dados.salvar('orcamentos',o);orcCur=null;render();
 }
 

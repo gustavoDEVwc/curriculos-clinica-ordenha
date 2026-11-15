@@ -106,3 +106,4 @@ th{vertical-align:bottom}
 .nt.s1{border-left-color:#e0a030}.nt.s2{border-left-color:#d9701f}.nt.s3{border-left-color:#c9553d}
 .nt.novo b::before{content:"● ";color:var(--w)}
 .nt:not(.novo){opacity:.7}
+#offline{padding:7px 12px;background:var(--w);color:var(--wt);font-size:13px;font-weight:600;text-align:center}

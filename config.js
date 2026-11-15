@@ -7,6 +7,7 @@ const FIREBASE_CONFIG={
   messagingSenderId:"200514396157",
   appId:"1:200514396157:web:ddfd8ea608d4a05b170394"
 };
+const GESTOR_NOME='Gustavo Wunder Costa'; // nome do gestor na lista de vendedores
 const GESTOR_UID='GDgIeOmpo3RRFjNdDhnXg6YdGXx1'; // somente este usuário vê tudo e abre a aba Gestor
 
 // Listas e campos do cadastro
@@ -64,7 +65,7 @@ const S=[
  ['scrapper','Scrapper','s',0,YN],['scrapper_marca','Marca scrapper','t'],['robo_empurrar','Robô de empurrar trato','s',0,YN],['robo_empurrar_marca','Marca robô de empurrar trato','t'],...ym('automacao_alim','Automação da alimentação')]],
 ['Produtos',[...PROD.flatMap(([k,l])=>[['p_'+k+'_marca',l+' – marca','s',0,MPROD],['p_'+k+'_produto',l+' – produto','t'],['p_'+k+'_nos',l+' – compra de nós?','s',0,YN]]),['p_oleo_bomba','Óleo da bomba – marca/produto','c'],['p_oleo_bomba_nos','Óleo da bomba – compra de nós?','s',0,YN]]],
 ];
-// Campos de uma visita (cada visita fica dentro do cliente, em cliente.visitas)
+// Campos de uma visita (cada visita é um registro da coleção "visitas")
 const VF=[['vendedor','Vendedor da visita','s',0,VEND],['data','Data da visita','d',1],['obs','Observação','a'],['oportunidades','Oportunidades','a'],['retorno','Retorno em','d']];
 const ALL=S.filter(s=>!s[2]).flatMap(s=>s[1]);
 const EXPF=[...ALL,['ultima_visita','Última visita','d']]; // campos exportados do cliente

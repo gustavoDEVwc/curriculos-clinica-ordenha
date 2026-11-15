@@ -1,23 +1,27 @@
-// Visitas a produtores: cada visita é guardada dentro do cliente (cliente.visitas)
+// Visitas a produtores: cada visita é um registro próprio (coleção "visitas") do vendedor que a cadastrou
 function visList(){
- const A=DB.clientes.flatMap(c=>(c.visitas||[]).map((x,i)=>({c,i,x})));
- const ds=[...new Set(A.map(o=>o.x.data).filter(Boolean))].sort().reverse(),rs=[...new Set(A.map(o=>o.x.retorno).filter(Boolean))].sort();
- const L=A.filter(o=>(!vfd||o.x.data==vfd)&&(!vfr||o.x.retorno==vfr)).sort((a,b)=>(b.x.data||'').localeCompare(a.x.data||''));
+ const A=DB.visitas,ds=[...new Set(A.map(x=>x.data).filter(Boolean))].sort().reverse(),rs=[...new Set(A.map(x=>x.retorno).filter(Boolean))].sort();
+ const L=A.filter(x=>(!vfd||x.data==vfd)&&(!vfr||x.retorno==vfr)).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
  const op=(a,s)=>'<option value="">Todas</option>'+a.map(d=>`<option value="${d}"${d==s?' selected':''}>${br(d)}</option>`).join('');
  return`<div class="bar2"><h2 style="margin:8px 0;flex:1 1 100%">Visitas a produtores</h2><button class="pri" data-act="vnovo">Cadastrar nova visita</button><button data-act="vagenda">Agenda de retornos</button></div>`
  +`<div class="box"><div class="g" id="vfl"><label>Data da visita<select id="vfd">${op(ds,vfd)}</select></label><label>Retorno da visita<select id="vfr">${op(rs,vfr)}</select></label></div></div>`
- +(L.length?`<div class="cards">${L.map(({c,i,x})=>`<div class="card" data-vi="${c.id}|${i}"><b>${esc(c.nome)}</b><small>${br(x.data)} · ${esc(x.vendedor||c.vendedor)}${x.retorno?' · retorno em '+br(x.retorno):''}</small></div>`).join('')}</div>`:`<p class="m">${A.length?'Nenhuma visita com esses filtros.':'Nenhuma visita cadastrada. Toque em “Cadastrar nova visita”.'}</p>`);
+ +(L.length?`<div class="cards">${L.map(x=>`<div class="card" data-vi="${x.id}"><b>${esc(x.produtor_nome)}</b><small>${br(x.data)} · ${esc(x.vendedor)}${x.retorno?' · retorno em '+br(x.retorno):''}</small></div>`).join('')}</div>`:`<p class="m">${A.length?'Nenhuma visita com esses filtros.':'Nenhuma visita cadastrada. Toque em “Cadastrar nova visita”.'}</p>`);
 }
 
-// Retornos pendentes: o retorno da última visita de cada produtor
-const retornos=(L=DB.clientes)=>L.map(c=>{const u=(c.visitas||[]).map((x,i)=>({x,i})).filter(o=>o.x.data||o.x.retorno).sort((a,b)=>(a.x.data||'')<(b.x.data||'')?-1:1).pop();return u&&u.x.retorno?{c,x:u.x,i:u.i,data:u.x.retorno}:null}).filter(Boolean);
+// Retornos pendentes: o retorno da última visita de cada produtor (L = clientes a considerar; sem L, todas as visitas visíveis)
+const retornos=L=>{
+ const ids=L&&new Set(L.map(c=>c.id)),g={};
+ DB.visitas.forEach(x=>{if(ids&&!ids.has(x.cliente_id))return;(g[x.cliente_id]=g[x.cliente_id]||[]).push(x)});
+ return Object.values(g).map(a=>a.sort((x,y)=>(x.data||'')<(y.data||'')?-1:1).pop()).filter(x=>x.retorno)
+  .map(x=>({id:x.id,x,data:x.retorno,c:{id:x.cliente_id,nome:x.produtor_nome,cidade:x.cidade,vendedor:x.vendedor}}));
+};
 
 // Lista de retornos de visitas: tabela no computador, cartões no celular (clicar abre a visita)
 const listaRet=R=>{
  if(!R.length)return'<p class="m">Nenhum retorno de visita agendado.</p>';
  const hj=hoje(),L=R.slice().sort((a,b)=>a.data.localeCompare(b.data)),atr=r=>r.data<hj;
- return`<div class="so-d sc"><table><thead><tr><th>Retorno</th><th>Cliente</th><th>Cidade</th><th>Vendedor</th></tr></thead><tbody>${L.map(r=>`<tr class="clk" data-vk="${r.c.id}|${r.i}"><td>${atr(r)?'⚠ atrasado · ':''}${br(r.data)}</td><td>${esc(r.c.nome)}</td><td>${esc(r.c.cidade)}</td><td>${esc(r.x.vendedor||r.c.vendedor)}</td></tr>`).join('')}</tbody></table></div>`
- +`<div class="so-m cards">${L.map(r=>`<div class="card" data-vk="${r.c.id}|${r.i}"><span><b>${esc(r.c.nome)}</b> <span class="pill ${atr(r)?'nf':''}">${atr(r)?'atrasado · ':''}${br(r.data)}</span></span><small>${esc(r.c.cidade)} · ${esc(r.x.vendedor||r.c.vendedor)}</small></div>`).join('')}</div><p class="m">Toque num retorno para ver a visita.</p>`;
+ return`<div class="so-d sc"><table><thead><tr><th>Retorno</th><th>Cliente</th><th>Cidade</th><th>Vendedor</th></tr></thead><tbody>${L.map(r=>`<tr class="clk" data-vk="${r.id}"><td>${atr(r)?'⚠ atrasado · ':''}${br(r.data)}</td><td>${esc(r.c.nome)}</td><td>${esc(r.c.cidade)}</td><td>${esc(r.x.vendedor)}</td></tr>`).join('')}</tbody></table></div>`
+ +`<div class="so-m cards">${L.map(r=>`<div class="card" data-vk="${r.id}"><span><b>${esc(r.c.nome)}</b> <span class="pill ${atr(r)?'nf':''}">${atr(r)?'atrasado · ':''}${br(r.data)}</span></span><small>${esc(r.c.cidade)} · ${esc(r.x.vendedor)}</small></div>`).join('')}</div><p class="m">Toque num retorno para ver a visita.</p>`;
 };
 
 // Agenda: calendário mensal; dias com retorno ficam em destaque com a quantidade
@@ -47,37 +51,27 @@ document.addEventListener('mouseover',e=>{const d=e.target.closest('[data-dia]')
 document.addEventListener('mouseout',e=>{if(e.target.closest('[data-dia]'))hideTip()});
 
 function visForm(){
- const v=vcur,P=DB.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome)),pr=P.find(c=>c.id==v.produtor_id),F=k=>VF.find(f=>f[0]==k);
- return`<form id="vf"><section><h2>${v.cid?'Editar visita':'Nova visita'}</h2>
+ const x=vcur,P=meusClientes().slice().sort((a,b)=>a.nome.localeCompare(b.nome)),pr=DB.clientes.find(c=>c.id==x.cliente_id),F=k=>VF.find(f=>f[0]==k);
+ return`<form id="vf"><section><h2>${x.id?'Editar visita':'Nova visita'}</h2>
  <div class="g"><label>Produtor *<input name="produtor" list="dl_prod" autocomplete="off" placeholder="Digite para buscar o produtor" value="${esc(pr?lbl(pr):'')}" required></label>
- ${inp(F('vendedor'),v.vendedor)}${inp(F('data'),v.data||hoje())}${inp(F('retorno'),v.retorno)}</div>
+ ${inp(F('vendedor'),x.vendedor||Auth.vendedor)}${inp(F('data'),x.data||hoje())}${inp(F('retorno'),x.retorno)}</div>
  <datalist id="dl_prod">${P.map(c=>`<option value="${esc(lbl(c))}">`).join('')}</datalist>
  <p id="vul" class="m"></p>
- <div class="g big">${inp(F('obs'),v.obs)}${inp(F('oportunidades'),v.oportunidades)}</div></section>
- <div class="act"><button class="pri">Salvar visita</button><button type="button" data-act="vback">Cancelar</button>${v.cid?'<button type="button" class="del" data-act="vdel">Excluir</button>':''}</div></form>`;
+ <div class="g big">${inp(F('obs'),x.obs)}${inp(F('oportunidades'),x.oportunidades)}</div></section>
+ <div class="act"><button class="pri">Salvar visita</button><button type="button" data-act="vback">Cancelar</button>${x.id?'<button type="button" class="del" data-act="vdel">Excluir</button>':''}</div></form>`;
 }
 
-// Mostra a última visita do produtor escolhido e sugere o vendedor responsável
+// Mostra a última visita do produtor escolhido; o vendedor é sempre o do login (não muda)
 function vsync(){
- const f=$('#vf').elements,c=prodSel(f.produtor.value);
- $('#vul').textContent=c?'Última visita deste produtor: '+(c.ultima_visita?br(c.ultima_visita):'nenhuma registrada'):'';
- if(c&&!f.vendedor.value)f.vendedor.value=c.vendedor||'';
+ const f=$('#vf').elements,c=prodSel(f.produtor.value),u=c?ultVisita(c):'';
+ f.vendedor.disabled=true;
+ $('#vul').textContent=c?'Última visita deste produtor: '+(u?br(u):'nenhuma registrada'):'';
 }
-
-const setVisitas=(c,L)=>Dados.salvar('clientes',{...c,visitas:L,ultima_visita:L.map(x=>x.data).filter(Boolean).sort().pop()||'',atualizado_em:new Date().toISOString()});
 
 function salvarVis(e){
  const f=e.target.elements,c=prodSel(f.produtor.value);
  if(!c){f.produtor.setCustomValidity('Selecione um produtor da lista');f.produtor.reportValidity();return}
- const g=k=>f[k].value.trim(),x={vendedor:g('vendedor'),data:g('data'),obs:g('obs'),oportunidades:g('oportunidades'),retorno:g('retorno')};
- if(vcur.cid&&vcur.cid!=c.id){ // visita mudou de produtor
-  const o=DB.clientes.find(y=>y.id==vcur.cid);
-  if(o)setVisitas(o,o.visitas.filter((_,i)=>i!=vcur.i));
-  setVisitas(c,[...(c.visitas||[]),x]);
- }else{
-  const L=(c.visitas||[]).slice();
-  vcur.cid?L[vcur.i]=x:L.push(x);
-  setVisitas(c,L);
- }
+ const g=k=>f[k].value.trim();
+ Dados.salvar('visitas',{id:vcur.id||uid(),owner:vcur.owner||Auth.user.uid,vendedor:vcur.vendedor||Auth.vendedor,cliente_id:c.id,produtor_nome:c.nome,cidade:c.cidade,data:g('data'),obs:g('obs'),oportunidades:g('oportunidades'),retorno:g('retorno'),atualizado_em:new Date().toISOString()});
  vcur=null;render();
 }

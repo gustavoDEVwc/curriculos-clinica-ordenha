@@ -18,14 +18,14 @@ function gestor(){
  if(!Auth.gestor)return box('Acesso restrito','<p class="m">Esta área é exclusiva do gestor.</p>');
  const cid=[...new Set(DB.clientes.map(c=>c.cidade).filter(Boolean))].sort();
  const F=gt=='dash'?fsel('gfv','Vendedor',VEND,gf.v)+fsel('gfc','Cidade',cid,gf.c)+fsel('gfi','InService',YN,gf.i)+fsel('gfp','Prioridade',['A','B','C','D'],gf.p)
-  :gt=='orc'?ofiltros():fsel('gvv','Vendedor',VEND,gv.v)+`<label>De<input type="date" id="gde" value="${gv.de}"></label><label>Até<input type="date" id="gate" value="${gv.ate}"></label>`;
- return`<div class="bar2">${[['dash','Dashboard'],['vis','Visitas dos vendedores'],['orc','Orçamentos']].map(([k,l])=>`<button class="${gt==k?'pri':''}" data-gt="${k}">${l}</button>`).join('')}</div><div class="box"><div class="g" id="gf">${F}</div></div><div id="gbody"></div>`;
+  :gt=='vend'?'':gt=='orc'?ofiltros():fsel('gvv','Vendedor',VEND,gv.v)+`<label>De<input type="date" id="gde" value="${gv.de}"></label><label>Até<input type="date" id="gate" value="${gv.ate}"></label>`;
+ return`<div class="bar2">${[['dash','Dashboard'],['vis','Visitas dos vendedores'],['orc','Orçamentos'],['vend','Vendedores']].map(([k,l])=>`<button class="${gt==k?'pri':''}" data-gt="${k}">${l}</button>`).join('')}</div>${F?`<div class="box"><div class="g" id="gf">${F}</div></div>`:''}<div id="gbody"></div>`;
 }
 function gdraw(){
  charts.forEach(c=>c.destroy());charts=[];jobs=[];pn=0;
  if(typeof Chart=='undefined'){$('#gbody').innerHTML='<p class="m">Os gráficos não carregaram. Conecte-se à internet e recarregue a página.</p>';return}
  Chart.defaults.color=getComputedStyle(document.body).color;
- $('#gbody').innerHTML=gt=='dash'?gdash():gt=='orc'?gorc():gvis();
+ $('#gbody').innerHTML=gt=='dash'?gdash():gt=='orc'?gorc():gt=='vend'?gvend():gvis();
  jobs.forEach(j=>j());
 }
 function gdash(){
@@ -44,15 +44,15 @@ function gvis(){
  const days=[];for(const d=new Date(de+'T12:00'),e=new Date(ate+'T12:00');d<=e&&days.length<93;d.setDate(d.getDate()+1))days.push(d.toISOString().slice(0,10));
  const by=Object.fromEntries(days.map(d=>[d,[]])),WD=['dom','seg','ter','qua','qui','sex','sáb'];
  const L=[];
- DB.clientes.forEach(c=>(c.visitas||[]).forEach((x,i)=>{const w=x.vendedor||c.vendedor||'';if(by[x.data]&&(!v||w==v)){by[x.data].push(`${c.nome} (${c.cidade})`+(v||!w?'':' · '+w));L.push({c,i,x,w})}}));
+ DB.visitas.forEach(x=>{const w=x.vendedor||'';if(by[x.data]&&(!v||w==v)){by[x.data].push(`${x.produtor_nome} (${x.cidade})`+(v||!w?'':' · '+w));L.push({x,w})}});
  L.sort((a,b)=>b.x.data.localeCompare(a.x.data));
  jobs.push(()=>charts.push(new Chart($('#vc'),{type:'bar',data:{labels:days.map(d=>WD[new Date(d+'T12:00').getDay()]+' '+br(d).slice(0,5)),datasets:[{label:'Visitas',data:days.map(d=>by[d].length),backgroundColor:cssv('--dl'),borderRadius:4}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{y:{beginAtZero:true,ticks:{precision:0},title:{display:true,text:'Visitas'}},x:{title:{display:true,text:'Data'}}},plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>br(days[i[0].dataIndex]),label:c=>c.parsed.y+(c.parsed.y==1?' visita':' visitas'),afterBody:i=>by[days[i[0].dataIndex]]}}}}})));
- return box(`Visitas${v?' – '+esc(v):''}: ${sum(days,d=>by[d].length)} no período`,`<div style="position:relative;height:340px"><canvas id="vc"></canvas></div><p class="m">Passe o mouse (ou toque) em uma barra para ver os clientes visitados no dia. Visita sem vendedor informado conta para o vendedor responsável pelo cliente.</p>`)+tabelaVis(L);
+ return box(`Visitas${v?' – '+esc(v):''}: ${sum(days,d=>by[d].length)} no período`,`<div style="position:relative;height:340px"><canvas id="vc"></canvas></div><p class="m">Passe o mouse (ou toque) em uma barra para ver os clientes visitados no dia.</p>`)+tabelaVis(L);
 }
 
 
 // Lista de visitas do período (respeita os filtros); clicar abre a janela só de leitura
-const tabelaVis=L=>box('Visitas no período',L.length?`<div class="so-d sc"><table><thead><tr><th>Produtor</th><th>Vendedor</th><th>Data da visita</th><th>Retorno em</th></tr></thead><tbody>${L.map(({c,i,x,w})=>`<tr class="clk" data-vk="${c.id}|${i}"><td>${esc(c.nome)}</td><td>${esc(w)}</td><td>${br(x.data)}</td><td>${br(x.retorno)}</td></tr>`).join('')}</tbody></table></div><div class="so-m cards">${L.map(({c,i,x,w})=>`<div class="card" data-vk="${c.id}|${i}"><span><b>${esc(c.nome)}</b> <span class="pill">${br(x.data)}</span></span><small>${esc(w)}${x.retorno?' · retorno em '+br(x.retorno):''}</small></div>`).join('')}</div><p class="m">Toque numa visita para ler a observação e as oportunidades.</p>`:'<p class="m">Nenhuma visita no período.</p>');
+const tabelaVis=L=>box('Visitas no período',L.length?`<div class="so-d sc"><table><thead><tr><th>Produtor</th><th>Vendedor</th><th>Data da visita</th><th>Retorno em</th></tr></thead><tbody>${L.map(({x,w})=>`<tr class="clk" data-vk="${x.id}"><td>${esc(x.produtor_nome)}</td><td>${esc(w)}</td><td>${br(x.data)}</td><td>${br(x.retorno)}</td></tr>`).join('')}</tbody></table></div><div class="so-m cards">${L.map(({x,w})=>`<div class="card" data-vk="${x.id}"><span><b>${esc(x.produtor_nome)}</b> <span class="pill">${br(x.data)}</span></span><small>${esc(w)}${x.retorno?' · retorno em '+br(x.retorno):''}</small></div>`).join('')}</div><p class="m">Toque numa visita para ler a observação e as oportunidades.</p>`:'<p class="m">Nenhuma visita no período.</p>');
 function abrirModal(html){
  fecharModal();
  const m=document.createElement('div');m.className='modal';m.id='modal';
@@ -60,10 +60,19 @@ function abrirModal(html){
  m.onclick=e=>{if(e.target==m||e.target.hasAttribute('data-fechar'))fecharModal()};
  document.body.appendChild(m);
 }
-function abrirVisita(cid,i){
- const c=DB.clientes.find(x=>x.id==cid),x=c&&c.visitas[i];if(!x)return;
+function abrirVisita(id){
+ const x=DB.visitas.find(v=>v.id==id);if(!x)return;
  const t=(l,s)=>`<h3>${l}</h3><p class="txt">${esc(s)||'<span class="m">Não preenchido</span>'}</p>`;
- abrirModal(`<h2>${esc(c.nome)}</h2><p class="info">${esc(c.cidade)} - ${esc(x.vendedor||c.vendedor||'')}<br>Visita em <b>${br(x.data)}</b>${x.retorno?`<br>Retorno em <b>${br(x.retorno)}</b>`:''}</p>${t('Observação',x.obs)}${t('Oportunidades',x.oportunidades)}`);
+ abrirModal(`<h2>${esc(x.produtor_nome)}</h2><p class="info">${esc(x.cidade)} - ${esc(x.vendedor||'')}<br>Visita em <b>${br(x.data)}</b>${x.retorno?`<br>Retorno em <b>${br(x.retorno)}</b>`:''}</p>${t('Observação',x.obs)}${t('Oportunidades',x.oportunidades)}`);
 }
 const fecharModal=()=>{const m=$('#modal');if(m)m.remove()};
 document.addEventListener('keydown',e=>{if(e.key=='Escape')fecharModal()});
+
+// Vínculo e-mail → vendedor (só o gestor vê esta aba): quem entra com o e-mail passa a cadastrar em nome do vendedor
+function gvend(){
+ const em=n=>((Auth.lista||[]).find(x=>x.nome==n)||{}).email||'';
+ const ja=n=>{const e=em(n);return !!e&&DB.usuarios.some(u=>u.email==e.toLowerCase())};
+ const lin=n=>n==GESTOR_NOME?`<label>${esc(n)}<input value="Conta do gestor" disabled></label>`
+  :`<label>${esc(n)}<input type="email" data-nome="${esc(n)}" placeholder="e-mail do vendedor" value="${esc(em(n))}">${LOCAL||!em(n)?'':`<small>${ja(n)?'já entrou no app':'ainda não entrou no app (precisa entrar uma vez para receber clientes)'}</small>`}</label>`;
+ return box('Vínculo dos vendedores',`<p class="m">Crie o login do vendedor no Firebase (Authentication > Adicionar usuário) e informe aqui o mesmo e-mail. Clientes, visitas e orçamentos que ele cadastrar ficam no nome dele; só ele e o gestor podem alterar. Para passar um cliente para outro vendedor, abra o cliente e troque o campo Vendedor responsável.</p><div id="gvl" class="g">${VEND.map(lin).join('')}</div><p><button class="pri" data-act="vsalvar">Salvar vínculos</button></p>`);
+}

@@ -23,9 +23,9 @@ function notificacoes(){
    if(m)add(`oret|${o.id}|${o.retorno}|${m}`,M.indexOf(m)+1,`Retorno do orçamento vencido há ${d} dias`,`${o.produtor_nome} · ${brl(o.valor)}${o.motivo?' · '+o.motivo:''}`,'orc',o.id,d);
   }
  });
- DB.clientes.forEach(c=>{
+ meusClientes().forEach(c=>{
   const lim=LIM_CAT[c.prioridade];if(!lim)return;
-  const ult=(c.visitas||[]).map(x=>x.data).filter(Boolean).sort().pop(),base=ult||(c.criado_em||'').slice(0,10);
+  const ult=ultVisita(c),base=ult||(c.criado_em||'').slice(0,10);
   if(!base)return;
   const d=dias(hj,base);
   if(d>lim)add(`cat|${c.id}|${base}`,{A:3,B:2,C:1}[c.prioridade],`Cliente ${c.prioridade} sem visita há ${d} dias`,`${c.nome} · ${c.cidade} · limite de ${lim} dias${ult?'':' (contado desde o cadastro)'}`,'vis',c.id,d);
@@ -51,6 +51,6 @@ function notifHTML(){
 function irNotif(tipo,id){
  cur=orcCur=vcur=null;vag=null;back=null;
  if(tipo=='orc'){tab='orc';orcCur=DB.orcamentos.find(o=>o.id==id)||null}
- else{tab='vis';vcur={produtor_id:id}}
+ else{tab='vis';vcur={cliente_id:id}}
  render();
 }
