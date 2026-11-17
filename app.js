@@ -9,7 +9,7 @@ const br=d=>d?d.split('-').reverse().join('/'):'';
 const hoje=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 function semana(){const d=new Date(hoje()+'T12:00');d.setDate(d.getDate()-(d.getDay()+6)%7);const a=d.toISOString().slice(0,10);d.setDate(d.getDate()+5);return{v:'',de:a,ate:d.toISOString().slice(0,10)}}
 
-let cur=null,tab='cli',q='',back=null,orcCur=null,orcDraft=null,vcur=null,lf='todos',vfd='',vfr='',vag=null,gt='dash',gf={v:'',c:'',i:'',p:''},gv=semana(),go={v:'',s:'',o:'',de:'',ate:''},charts=[],jobs=[];
+let cur=null,tab='cli',q='',back=null,orcCur=null,orcDraft=null,vcur=null,lf='todos',gsel=null,gopen=false,vfd='',vfr='',vag=null,gt='dash',gf={v:'',c:'',i:'',p:''},gv=semana(),go={v:'',s:'',o:'',de:'',ate:''},charts=[],jobs=[];
 
 function inp(f,v,list){
  const[k,l,t,r,o]=f,at=list?`data-k="${k}"`:`name="${k}"`,rq=r?' required':'';
@@ -81,8 +81,8 @@ function xlsx(){
  {const[h,d]=sub('resfriadores');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d,{header:h}),'resfriadores')}
  const VH=['id','cliente_id','produtor_nome','cidade','vendedor','data','obs','oportunidades','retorno'];
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DB.visitas.map(v=>Object.fromEntries(VH.map(k=>[k,v[k]??'']))),{header:VH}),'visitas');
- const OH=['id','vendedor','data','objetivo','produtor_id','produtor_nome','cidade','produtos','valor','comissao_valor','fechamento','motivo','retorno'];
- XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DB.orcamentos.map(o=>Object.fromEntries(OH.map(k=>[k,k=='valor'||k=='comissao_valor'?+o[k]||0:o[k]??'']))),{header:OH}),'orcamentos');
+ const OH=['id','vendedor','data','objetivo','produtor_id','produtor_nome','cidade','produtos','valor','via_coamo','comissao_valor','recebimento_clinica','fechamento','motivo','retorno'];
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DB.orcamentos.map(o=>Object.fromEntries(OH.map(k=>[k,['valor','comissao_valor','recebimento_clinica'].includes(k)?+o[k]||0:o[k]??'']))),{header:OH}),'orcamentos');
  XLSX.writeFile(wb,'clinica_ordenha_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
@@ -94,13 +94,17 @@ function travarForm(){
  f.querySelector('[data-act=back]').textContent='Voltar';
  f.insertAdjacentHTML('afterbegin',`<div class="box"><b>Somente leitura.</b> Este cliente é de ${esc(cur.vendedor||'outro vendedor')}; só ele e o gestor podem alterar o cadastro.</div>`);
 }
+const medeHeader=()=>document.documentElement.style.setProperty('--hh',$('header').offsetHeight+'px');
+addEventListener('resize',medeHeader);
 function render(keep){
- const n=$('#nav'),m=$('#menu'),ap=$('#app');
+ const n=$('#nav'),m=$('#menu'),ap=$('#app'),ac=$('#acoes');
  m.hidden=true;
- if(!Auth.pronto||Auth.erro||!Auth.user){n.innerHTML=m.innerHTML='';ap.innerHTML=!Auth.pronto?'<p class="m">Carregando…</p>':Auth.erro?'<p class="m">Não foi possível carregar o Firebase. Verifique a internet e recarregue a página.</p>':loginHTML();return}
- const X=[['exp','Exportar'],...(Auth.gestor?[['ges','Gestor']]:[])],b=([k,l],c='')=>`<button class="${c}${tab==k?' on':''}" data-tab="${k}">${l}</button>`;
- n.innerHTML=[['cli','Currículo do Cliente'],['vis','Visitas a produtores'],['orc','Orçamentos'],['dash','Dashboard']].map(t=>b(t)).join('')+X.map(t=>b(t,'sec ')).join('')+bell()+btnTema()+'<button class="sec sair" data-act="sair">Sair</button><button class="more" data-act="menu" aria-label="Mais opções">⋮</button>';
- m.innerHTML=X.map(([k,l])=>`<button data-tab="${k}">${l}</button>`).join('')+'<button data-act="sair">Sair</button>';
+ if(!Auth.pronto||Auth.erro||!Auth.user){n.innerHTML=m.innerHTML=ac.innerHTML='';ap.innerHTML=!Auth.pronto?'<p class="m">Carregando…</p>':Auth.erro?'<p class="m">Não foi possível carregar o Firebase. Verifique a internet e recarregue a página.</p>':loginHTML();return}
+ const T=[['cli','Currículo do Cliente'],['vis','Visitas a produtores'],['orc','Orçamentos'],['dash','Dashboard'],['exp','Exportar'],...(Auth.gestor?[['ges','Gestor']]:[])],bt=([k,l])=>`<button class="${tab==k?'on':''}" data-tab="${k}">${l}</button>`;
+ n.innerHTML=T.map(bt).join(''); // abas (computador)
+ ac.innerHTML=bell()+btnTema()+'<button class="sairb" data-act="sair">Sair</button><button class="hamb" data-act="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>';
+ m.innerHTML=T.map(bt).join('')+'<button class="sairm" data-act="sair">Sair</button>'; // menu do celular
+ medeHeader();
  ap.innerHTML=tab=='cli'?(cur?form():list()):tab=='orc'?(orcCur?orcForm():orcList()):tab=='vis'?(vcur?visForm():vag?agenda():visList()):tab=='dash'?dash():tab=='ges'?gestor():exp();
  if(cur&&tab=='cli'){sync();if(!podeEditar(cur))travarForm()}
  if(orcCur&&tab=='orc')osync();
@@ -110,14 +114,14 @@ function render(keep){
 }
 
 document.addEventListener('click',e=>{
- if(!e.target.closest('.more')){const mn=$('#menu');if(mn)mn.hidden=true}
+ if(!e.target.closest('.hamb')){const mn=$('#menu');if(mn)mn.hidden=true}
  if(!e.target.closest('[data-dia]'))hideTip();
  if(!e.target.closest('.bell,#notif'))$('#notif').hidden=true;
  const t=e.target.closest('[data-tab],[data-act],[data-id],[data-gt],[data-oid],[data-vi],[data-vk],[data-ok],[data-dia],[data-nt],[data-lf]');if(!t)return;
  const d=t.dataset;
- if(d.tab){tab=d.tab;cur=null;orcCur=null;vcur=null;vag=null;back=null;render()}
+ if(d.tab){if(d.tab=='ges'){gsel=null;gopen=false}tab=d.tab;cur=null;orcCur=null;vcur=null;vag=null;back=null;render()}
  else if(d.oid){orcCur=DB.orcamentos.find(o=>o.id==d.oid);render()}
- else if(d.gt){gt=d.gt;render()}
+ else if(d.gt){gt=d.gt;if(gt=='dash')gsel=null;render()}
  else if(d.id){cur=DB.clientes.find(c=>c.id==d.id);render()}
  else if(d.act=='new'){if(exigeVinculo()){cur={};render()}}
  else if(d.act=='back'){cur=null;if(back=='orc'){back=null;tab='orc';orcCur=orcDraft}render()}
@@ -135,7 +139,7 @@ document.addEventListener('click',e=>{
    if(p.coords.accuracy<=15)fim();
   },()=>fim(best?null:'Não foi possível obter a localização. Permita o acesso à localização no navegador e no aparelho.'),{enableHighAccuracy:true,maximumAge:0,timeout:25000});
  }
- else if(d.act=='menu'){const mn=$('#menu');mn.style.top=t.getBoundingClientRect().bottom+'px';mn.hidden=!mn.hidden}
+ else if(d.act=='menu'){const mn=$('#menu');mn.style.top=$('header').getBoundingClientRect().bottom+'px';mn.hidden=!mn.hidden}
  else if(d.act=='sair'){tab='cli';cur=orcCur=vcur=null;vag=null;Dados.sair()}
  else if(d.act=='onovo'){if(exigeVinculo()){orcCur={};render()}}
  else if(d.act=='oback'){orcCur=null;render()}
@@ -143,7 +147,7 @@ document.addEventListener('click',e=>{
  else if(d.act=='ocnovo'){if(!exigeVinculo())return;orcDraft=ocollect();back='orc';tab='cli';cur={};orcCur=null;render()}
  else if(d.act=='tema')alternarTema();
  else if(d.nt){const[tp,id]=d.nt.split('|');marcar([t.dataset.nk]);refBadge();$('#notif').hidden=true;irNotif(tp,id)}
- else if(d.act=='notif'){const p=$('#notif');p.innerHTML=notifHTML();p.style.top=$('#nav').getBoundingClientRect().bottom+'px';p.hidden=!p.hidden}
+ else if(d.act=='notif'){const p=$('#notif');p.innerHTML=notifHTML();p.style.top=$('header').getBoundingClientRect().bottom+'px';p.hidden=!p.hidden}
  else if(d.act=='nlidas'){marcar(notificacoes().map(x=>x.k));$('#notif').innerHTML=notifHTML();refBadge()}
  else if(d.lf){lf=d.lf;render(true)}
  else if(d.ok)abrirOrc(d.ok);
@@ -161,6 +165,17 @@ document.addEventListener('click',e=>{
   if(new Set(em).size<em.length)return alert('Há e-mails repetidos.');
   Dados.salvarConfig(lista);alert('Vínculos salvos.');
  }
+ else if(d.act=='gtodos'){gsel=null;gdraw()}
+ else if(d.act=='gnenhum'){gsel=new Set();gdraw()}
+ else if(d.act=='lad'){
+  const k=d.k,v=$('#li_'+k).value.trim();if(!v)return;
+  if(LISTAS[k].some(x=>x.toLowerCase()==v.toLowerCase()))return alert('Esta opção já existe na lista.');
+  LISTAS[k].splice(LISTAS[k].length-FIXOS[k].length,0,v);Dados.salvarListas(listasParaSalvar());gdraw();
+ }
+ else if(d.act=='lrm'){
+  if(!confirm('Remover "'+d.v+'" da lista?'))return;
+  const i=LISTAS[d.k].indexOf(d.v);if(i>=0)LISTAS[d.k].splice(i,1);Dados.salvarListas(listasParaSalvar());gdraw();
+ }
  else if(d.act=='xlsx')xlsx();
  else if(d.act=='json'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB)],{type:'application/json'}));a.download='backup_clinica_ordenha.json';a.click()}
 });
@@ -169,6 +184,7 @@ document.addEventListener('input',e=>{if(e.target.id=='q'){q=e.target.value;$('#
 document.addEventListener('change',e=>{
  if(e.target.closest('#f'))sync();
  if(e.target.closest('#of'))osync();
+ if(e.target.matches('[data-g]')){if(!gsel)gsel=new Set(GKEYS);e.target.checked?gsel.add(e.target.dataset.g):gsel.delete(e.target.dataset.g);gdraw()}
  if(e.target.closest('#vf'))vsync();
  if(e.target.closest('#vfl')){if(e.target.id=='vfd')vfd=e.target.value;else vfr=e.target.value;render(true)}
  if(e.target.id=='vmes'&&e.target.value){vag=e.target.value;render(true)}

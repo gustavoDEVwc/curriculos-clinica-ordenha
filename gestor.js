@@ -1,333 +1,105 @@
 // Área do gestor: dashboard em pizza e visitas dos vendedores
 // ===== Área do gestor =====
 // Cores dos gráficos: azul DeLaval (--dl) para a marca DeLaval e para as barras; demais fatias em tons distintos
-const cssv = (n) =>
-  getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const PAL = [
-  "#007aff",
-  "#5ac8fa",
-  "#ff9500",
-  "#af52de",
-  "#34c759",
-  "#8e8e93",
-  "#ff2d55",
-  "#5856d6",
-  "#a2845e",
-  "#30b0c7",
-  "#ffcc00",
-];
-const corDe = (l, i) => (l == "DeLaval" ? cssv("--dl") : PAL[i % PAL.length]);
-const fsel = (id, l, o, v) =>
-  `<label>${l}<select id="${id}"><option value="">Todos</option>${o.map((x) => `<option${x == v ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></label>`;
-const pairs = (a, f) =>
-  Object.entries(grp(a, f))
-    .map(([k, v]) => [k, v.length])
-    .sort((x, y) => y[1] - x[1]);
-const topN = (p, n = 11) =>
-  p.length > n
-    ? [...p.slice(0, n), ["Outras", sum(p.slice(n), (x) => x[1])]]
-    : p;
-let pn = 0;
-function pbox(t, p) {
-  if (!p.length || !sum(p, (x) => x[1]))
-    return box(t, '<p class="m">Sem dados.</p>');
-  const id = "pc" + pn++;
-  jobs.push(() =>
-    charts.push(
-      new Chart($("#" + id), {
-        type: "pie",
-        data: {
-          labels: p.map((x) => x[0]),
-          datasets: [
-            {
-              data: p.map((x) => x[1]),
-              backgroundColor: p.map((x, i) => corDe(x[0], i)),
-              borderColor: cssv("--c"),
-              borderWidth: 2,
-            },
-          ],
-        },
-        options: {
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: "bottom" },
-            tooltip: {
-              callbacks: {
-                label: (c) => {
-                  const T = c.dataset.data.reduce((a, b) => a + b, 0);
-                  return `${c.label}: ${fmt(c.parsed)} (${Math.round((100 * c.parsed) / T)}%)`;
-                },
-              },
-            },
-          },
-        },
-      }),
-    ),
-  );
-  return box(
-    t,
-    `<div style="position:relative;height:270px"><canvas id="${id}"></canvas></div>`,
-  );
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const PAL=['#007aff','#5ac8fa','#ff9500','#af52de','#34c759','#8e8e93','#ff2d55','#5856d6','#a2845e','#30b0c7','#ffcc00'];
+const corDe=(l,i)=>l=='DeLaval'?cssv('--dl'):PAL[i%PAL.length];
+const fsel=(id,l,o,v)=>`<label>${l}<select id="${id}"><option value="">Todos</option>${o.map(x=>`<option${x==v?' selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+const pairs=(a,f)=>Object.entries(grp(a,f)).map(([k,v])=>[k,v.length]).sort((x,y)=>y[1]-x[1]);
+const topN=(p,n=11)=>p.length>n?[...p.slice(0,n),['Outras',sum(p.slice(n),x=>x[1])]]:p;
+let pn=0;
+function pbox(t,p){
+ if(!p.length||!sum(p,x=>x[1]))return box(t,'<p class="m">Sem dados.</p>');
+ const id='pc'+(pn++);
+ jobs.push(()=>charts.push(new Chart($('#'+id),{type:'pie',data:{labels:p.map(x=>x[0]),datasets:[{data:p.map(x=>x[1]),backgroundColor:p.map((x,i)=>corDe(x[0],i)),borderColor:cssv('--c'),borderWidth:2}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>{const T=c.dataset.data.reduce((a,b)=>a+b,0);return`${c.label}: ${fmt(c.parsed)} (${Math.round(100*c.parsed/T)}%)`}}}}}})));
+ return box(t,`<div style="position:relative;height:270px"><canvas id="${id}"></canvas></div>`);
 }
-function gestor() {
-  if (!Auth.gestor)
-    return box(
-      "Acesso restrito",
-      '<p class="m">Esta área é exclusiva do gestor.</p>',
-    );
-  const cid = [
-    ...new Set(DB.clientes.map((c) => c.cidade).filter(Boolean)),
-  ].sort();
-  const F =
-    gt == "dash"
-      ? fsel("gfv", "Vendedor", VEND, gf.v) +
-        fsel("gfc", "Cidade", cid, gf.c) +
-        fsel("gfi", "InService", YN, gf.i) +
-        fsel("gfp", "Prioridade", ["A", "B", "C", "D"], gf.p)
-      : gt == "vend"
-        ? ""
-        : gt == "orc"
-          ? ofiltros()
-          : fsel("gvv", "Vendedor", VEND, gv.v) +
-            `<label>De<input type="date" id="gde" value="${gv.de}"></label><label>Até<input type="date" id="gate" value="${gv.ate}"></label>`;
-  return `<div class="bar2">${[
-    ["dash", "Dashboard"],
-    ["vis", "Visitas dos vendedores"],
-    ["orc", "Orçamentos"],
-    ["vend", "Vendedores"],
-  ]
-    .map(
-      ([k, l]) =>
-        `<button class="${gt == k ? "pri" : ""}" data-gt="${k}">${l}</button>`,
-    )
-    .join(
-      "",
-    )}</div>${F ? `<div class="box"><div class="g" id="gf">${F}</div></div>` : ""}<div id="gbody"></div>`;
+function gestor(){
+ if(!Auth.gestor)return box('Acesso restrito','<p class="m">Esta área é exclusiva do gestor.</p>');
+ const cid=[...new Set(DB.clientes.map(c=>c.cidade).filter(Boolean))].sort();
+ const F=gt=='dash'?fsel('gfv','Vendedor',VEND,gf.v)+fsel('gfc','Cidade',cid,gf.c)+fsel('gfi','InService',YN,gf.i)+fsel('gfp','Prioridade',['A','B','C','D'],gf.p)
+  :gt=='vend'||gt=='listas'?'':gt=='orc'?ofiltros():fsel('gvv','Vendedor',VEND,gv.v)+`<label>De<input type="date" id="gde" value="${gv.de}"></label><label>Até<input type="date" id="gate" value="${gv.ate}"></label>`;
+ return`<div class="bar2">${[['dash','Dashboard'],['vis','Visitas dos vendedores'],['orc','Orçamentos'],['vend','Vendedores'],['listas','Marcas e listas']].map(([k,l])=>`<button class="${gt==k?'pri':''}" data-gt="${k}">${l}</button>`).join('')}</div>${F?`<div class="box"><div class="g" id="gf">${F}</div></div>`:''}<div id="gbody"></div>`;
 }
-function gdraw() {
-  charts.forEach((c) => c.destroy());
-  charts = [];
-  jobs = [];
-  pn = 0;
-  if (typeof Chart == "undefined") {
-    $("#gbody").innerHTML =
-      '<p class="m">Os gráficos não carregaram. Conecte-se à internet e recarregue a página.</p>';
-    return;
-  }
-  Chart.defaults.color = getComputedStyle(document.body).color;
-  $("#gbody").innerHTML =
-    gt == "dash"
-      ? gdash()
-      : gt == "orc"
-        ? gorc()
-        : gt == "vend"
-          ? gvend()
-          : gvis();
-  jobs.forEach((j) => j());
+function gdraw(){
+ charts.forEach(c=>c.destroy());charts=[];jobs=[];pn=0;
+ if(typeof Chart=='undefined'){$('#gbody').innerHTML='<p class="m">Os gráficos não carregaram. Conecte-se à internet e recarregue a página.</p>';return}
+ Chart.defaults.color=getComputedStyle(document.body).color;
+ $('#gbody').innerHTML=gt=='dash'?gdash():gt=='orc'?gorc():gt=='vend'?gvend():gt=='listas'?glistas():gvis();
+ jobs.forEach(j=>j());
 }
-function gdash() {
-  const C = DB.clientes.filter(
-    (c) =>
-      (!gf.v || c.vendedor == gf.v) &&
-      (!gf.c || c.cidade == gf.c) &&
-      (!gf.i || c.inservice == gf.i) &&
-      (!gf.p || c.prioridade == gf.p),
-  );
-  if (!C.length) return '<p class="m">Nenhum cliente com esses filtros.</p>';
-  const cap = (c) => sum(c.resfriadores || [], (r) => r.capacidade_l),
-    kpi = (l, v) =>
-      `<div class="kpi"><b>${fmt(v)}</b><small>${l}</small></div>`;
-  const by = (f, v) =>
-      topN(
-        Object.entries(grp(C, f))
-          .map(([k, a]) => [k, sum(a, v)])
-          .sort((x, y) => y[1] - x[1]),
-      ),
-    reg = (c) => c.regiao || c.cidade;
-  const prod = PROD.map(([k, l]) => {
-    const a = C.filter((c) => c["p_" + k + "_marca"]);
-    return pbox(
-      `${l} (${a.filter((c) => c["p_" + k + "_nos"] == "Sim").length} de ${a.length} compram de nós)`,
-      pairs(a, (c) => c["p_" + k + "_marca"]),
-    );
-  }).join("");
-  return (
-    `<div class="kpis">${kpi("clientes", C.length)}${kpi(
-      "vacas em ordenha",
-      sum(C, (c) => c.animais_ordenha),
-    )}${kpi(
-      "conjuntos de ordenha",
-      sum(C, (c) => c.unidades_ordenha),
-    )}${kpi(
-      "litros por dia",
-      sum(C, (c) => c.producao_dia),
-    )}${kpi("litros de resfriamento", sum(C, cap))}</div>` +
-    `<div class="two">${pbox(
-      "Marcas de ordenha",
-      pairs(C, (c) => c.ord_marca),
-    )}${pbox(
-      "Vacas em ordenha por região",
-      by(reg, (c) => c.animais_ordenha),
-    )}${pbox(
-      "Litros por dia por região",
-      by(reg, (c) => c.producao_dia),
-    )}${pbox("Resfriamento instalado (L) por região", by(reg, cap))}${pbox(
-      "Clientes por vendedor",
-      pairs(C, (c) => c.vendedor),
-    )}${pbox(
-      "Prioridade",
-      pairs(C, (c) => c.prioridade),
-    )}${pbox(
-      "InService",
-      pairs(C, (c) => c.inservice),
-    )}${pbox(
-      "Perfil",
-      pairs(C, (c) => c.perfil),
-    )}${pbox(
-      "Tipo de barracão",
-      pairs(C, (c) => c.tipo_barracao),
-    )}${pbox(
-      "Tipo de equipamento",
-      pairs(C, (c) => c.tipo_equipamento),
-    )}${pbox(
-      "Marcas de resfriador",
-      pairs(
-        C.flatMap((c) => c.resfriadores || []),
-        (r) => r.marca,
-      ),
-    )}${pbox(
-      "Marca do conjunto de ordenha",
-      pairs(C, (c) => c.conjunto_marca),
-    )}${prod}</div>` +
-    box("Retornos de visitas agendados", listaRet(retornos(C)))
-  );
+let GKEYS=[];
+function gdash(){
+ const C=DB.clientes.filter(c=>(!gf.v||c.vendedor==gf.v)&&(!gf.c||c.cidade==gf.c)&&(!gf.i||c.inservice==gf.i)&&(!gf.p||c.prioridade==gf.p));
+ if(!C.length)return'<p class="m">Nenhum cliente com esses filtros.</p>';
+ const cap=c=>sum(c.resfriadores||[],r=>r.capacidade_l),kpi=(l,v)=>`<div class="kpi"><b>${fmt(v)}</b><small>${l}</small></div>`;
+ const by=(f,v)=>topN(Object.entries(grp(C,f)).map(([k,a])=>[k,sum(a,v)]).sort((x,y)=>y[1]-x[1])),reg=c=>c.regiao||c.cidade,R=C.flatMap(c=>c.resfriadores||[]);
+ // [chave, nome no filtro, função que desenha]
+ const GR=[
+  ['marcas','Marcas de ordenha',()=>pbox('Marcas de ordenha',pairs(C,c=>c.ord_marca))],
+  ['vacas','Vacas em ordenha por região',()=>pbox('Vacas em ordenha por região',by(reg,c=>c.animais_ordenha))],
+  ['litros','Litros por dia por região',()=>pbox('Litros por dia por região',by(reg,c=>c.producao_dia))],
+  ['resf_reg','Resfriamento instalado (L) por região',()=>pbox('Resfriamento instalado (L) por região',by(reg,cap))],
+  ['vendedor','Clientes por vendedor',()=>pbox('Clientes por vendedor',pairs(C,c=>c.vendedor))],
+  ['prioridade','Prioridade',()=>pbox('Prioridade',pairs(C,c=>c.prioridade))],
+  ['inservice','InService',()=>pbox('InService',pairs(C,c=>c.inservice))],
+  ['coamo','Cooperado Coamo',()=>pbox('Cooperado Coamo',pairs(C,c=>c.cooperado_coamo))],
+  ['perfil','Perfil',()=>pbox('Perfil',pairs(C,c=>c.perfil))],
+  ['barracao','Tipo de barracão',()=>pbox('Tipo de barracão',pairs(C,c=>c.tipo_barracao))],
+  ['equip','Tipo de equipamento',()=>pbox('Tipo de equipamento',pairs(C,c=>c.tipo_equipamento))],
+  ['resfriador','Marcas de resfriador',()=>pbox('Marcas de resfriador',pairs(R,r=>r.marca))],
+  ['conjunto','Marca do conjunto de ordenha',()=>pbox('Marca do conjunto de ordenha',pairs(C,c=>c.conjunto_marca))],
+  ...PROD.map(([k,l])=>['p_'+k,l+' – marcas',()=>{const a=C.filter(c=>c['p_'+k+'_marca']);return pbox(`${l} (${a.filter(c=>c['p_'+k+'_nos']=='Sim').length} de ${a.length} compram de nós)`,pairs(a,c=>c['p_'+k+'_marca']))}])];
+ GKEYS=GR.map(x=>x[0]);
+ const on=x=>!gsel||gsel.has(x[0]),V=GR.filter(on);
+ const filtro=`<details id="gchk" class="box"${gopen?' open':''}><summary><b>Gráficos exibidos</b> (${V.length} de ${GR.length})</summary><p><button type="button" data-act="gtodos">Marcar todos</button> <button type="button" data-act="gnenhum">Desmarcar todos</button></p><div class="chk">${GR.map(x=>`<label><input type="checkbox" data-g="${x[0]}"${on(x)?' checked':''}> ${esc(x[1])}</label>`).join('')}</div></details>`;
+ return`<div class="kpis">${kpi('clientes',C.length)}${kpi('vacas em ordenha',sum(C,c=>c.animais_ordenha))}${kpi('conjuntos de ordenha',sum(C,c=>c.unidades_ordenha))}${kpi('litros por dia',sum(C,c=>c.producao_dia))}${kpi('litros de resfriamento',sum(C,cap))}</div>`
+ +filtro+(V.length?`<div class="two">${V.map(x=>x[2]()).join('')}</div>`:'<p class="m">Nenhum gráfico selecionado.</p>')
+ +box('Retornos de visitas agendados',listaRet(retornos(C)));
 }
-function gvis() {
-  const { v, de, ate } = gv;
-  if (!de || !ate || de > ate)
-    return '<p class="m">Informe um período válido (data inicial até data final).</p>';
-  const days = [];
-  for (
-    const d = new Date(de + "T12:00"), e = new Date(ate + "T12:00");
-    d <= e && days.length < 93;
-    d.setDate(d.getDate() + 1)
-  )
-    days.push(d.toISOString().slice(0, 10));
-  const by = Object.fromEntries(days.map((d) => [d, []])),
-    WD = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
-  const L = [];
-  DB.visitas.forEach((x) => {
-    const w = x.vendedor || "";
-    if (by[x.data] && (!v || w == v)) {
-      by[x.data].push(
-        `${x.produtor_nome} (${x.cidade})` + (v || !w ? "" : " · " + w),
-      );
-      L.push({ x, w });
-    }
-  });
-  L.sort((a, b) => b.x.data.localeCompare(a.x.data));
-  jobs.push(() =>
-    charts.push(
-      new Chart($("#vc"), {
-        type: "bar",
-        data: {
-          labels: days.map(
-            (d) =>
-              WD[new Date(d + "T12:00").getDay()] + " " + br(d).slice(0, 5),
-          ),
-          datasets: [
-            {
-              label: "Visitas",
-              data: days.map((d) => by[d].length),
-              backgroundColor: cssv("--dl"),
-              borderRadius: 4,
-            },
-          ],
-        },
-        options: {
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { precision: 0 },
-              title: { display: true, text: "Visitas" },
-            },
-            x: { title: { display: true, text: "Data" } },
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: (i) => br(days[i[0].dataIndex]),
-                label: (c) =>
-                  c.parsed.y + (c.parsed.y == 1 ? " visita" : " visitas"),
-                afterBody: (i) => by[days[i[0].dataIndex]],
-              },
-            },
-          },
-        },
-      }),
-    ),
-  );
-  return (
-    box(
-      `Visitas${v ? " – " + esc(v) : ""}: ${sum(days, (d) => by[d].length)} no período`,
-      `<div style="position:relative;height:340px"><canvas id="vc"></canvas></div><p class="m">Passe o mouse (ou toque) em uma barra para ver os clientes visitados no dia.</p>`,
-    ) + tabelaVis(L)
-  );
+function gvis(){
+ const{v,de,ate}=gv;
+ if(!de||!ate||de>ate)return'<p class="m">Informe um período válido (data inicial até data final).</p>';
+ const days=[];for(const d=new Date(de+'T12:00'),e=new Date(ate+'T12:00');d<=e&&days.length<93;d.setDate(d.getDate()+1))days.push(d.toISOString().slice(0,10));
+ const by=Object.fromEntries(days.map(d=>[d,[]])),WD=['dom','seg','ter','qua','qui','sex','sáb'];
+ const L=[];
+ DB.visitas.forEach(x=>{const w=x.vendedor||'';if(by[x.data]&&(!v||w==v)){by[x.data].push(`${x.produtor_nome} (${x.cidade})`+(v||!w?'':' · '+w));L.push({x,w})}});
+ L.sort((a,b)=>b.x.data.localeCompare(a.x.data));
+ jobs.push(()=>charts.push(new Chart($('#vc'),{type:'bar',data:{labels:days.map(d=>WD[new Date(d+'T12:00').getDay()]+' '+br(d).slice(0,5)),datasets:[{label:'Visitas',data:days.map(d=>by[d].length),backgroundColor:cssv('--dl'),borderRadius:4}]},options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{y:{beginAtZero:true,ticks:{precision:0},title:{display:true,text:'Visitas'}},x:{title:{display:true,text:'Data'}}},plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>br(days[i[0].dataIndex]),label:c=>c.parsed.y+(c.parsed.y==1?' visita':' visitas'),afterBody:i=>by[days[i[0].dataIndex]]}}}}})));
+ return box(`Visitas${v?' – '+esc(v):''}: ${sum(days,d=>by[d].length)} no período`,`<div style="position:relative;height:340px"><canvas id="vc"></canvas></div><p class="m">Passe o mouse (ou toque) em uma barra para ver os clientes visitados no dia.</p>`)+tabelaVis(L);
 }
+
 
 // Lista de visitas do período (respeita os filtros); clicar abre a janela só de leitura
-const tabelaVis = (L) =>
-  box(
-    "Visitas no período",
-    L.length
-      ? `<div class="so-d sc"><table><thead><tr><th>Produtor</th><th>Vendedor</th><th>Data da visita</th><th>Retorno em</th></tr></thead><tbody>${L.map(({ x, w }) => `<tr class="clk" data-vk="${x.id}"><td>${esc(x.produtor_nome)}</td><td>${esc(w)}</td><td>${br(x.data)}</td><td>${br(x.retorno)}</td></tr>`).join("")}</tbody></table></div><div class="so-m cards">${L.map(({ x, w }) => `<div class="card" data-vk="${x.id}"><span><b>${esc(x.produtor_nome)}</b> <span class="pill">${br(x.data)}</span></span><small>${esc(w)}${x.retorno ? " · retorno em " + br(x.retorno) : ""}</small></div>`).join("")}</div><p class="m">Toque numa visita para ler a observação e as oportunidades.</p>`
-      : '<p class="m">Nenhuma visita no período.</p>',
-  );
-function abrirModal(html) {
-  fecharModal();
-  const m = document.createElement("div");
-  m.className = "modal";
-  m.id = "modal";
-  m.innerHTML = `<div class="mbox" role="dialog" aria-modal="true"><button class="x" data-fechar>Fechar</button>${html}</div>`;
-  m.onclick = (e) => {
-    if (e.target == m || e.target.hasAttribute("data-fechar")) fecharModal();
-  };
-  document.body.appendChild(m);
+const tabelaVis=L=>box('Visitas no período',L.length?`<div class="so-d sc"><table><thead><tr><th>Produtor</th><th>Vendedor</th><th>Data da visita</th><th>Retorno em</th></tr></thead><tbody>${L.map(({x,w})=>`<tr class="clk" data-vk="${x.id}"><td>${esc(x.produtor_nome)}</td><td>${esc(w)}</td><td>${br(x.data)}</td><td>${br(x.retorno)}</td></tr>`).join('')}</tbody></table></div><div class="so-m cards">${L.map(({x,w})=>`<div class="card" data-vk="${x.id}"><span><b>${esc(x.produtor_nome)}</b> <span class="pill">${br(x.data)}</span></span><small>${esc(w)}${x.retorno?' · retorno em '+br(x.retorno):''}</small></div>`).join('')}</div><p class="m">Toque numa visita para ler a observação e as oportunidades.</p>`:'<p class="m">Nenhuma visita no período.</p>');
+function abrirModal(html){
+ fecharModal();
+ const m=document.createElement('div');m.className='modal';m.id='modal';
+ m.innerHTML=`<div class="mbox" role="dialog" aria-modal="true"><button class="x" data-fechar>Fechar</button>${html}</div>`;
+ m.onclick=e=>{if(e.target==m||e.target.hasAttribute('data-fechar'))fecharModal()};
+ document.body.appendChild(m);
 }
-function abrirVisita(id) {
-  const x = DB.visitas.find((v) => v.id == id);
-  if (!x) return;
-  const t = (l, s) =>
-    `<h3>${l}</h3><p class="txt">${esc(s) || '<span class="m">Não preenchido</span>'}</p>`;
-  abrirModal(
-    `<h2>${esc(x.produtor_nome)}</h2><p class="info">${esc(x.cidade)} - ${esc(x.vendedor || "")}<br>Visita em <b>${br(x.data)}</b>${x.retorno ? `<br>Retorno em <b>${br(x.retorno)}</b>` : ""}</p>${t("Observação", x.obs)}${t("Oportunidades", x.oportunidades)}`,
-  );
+function abrirVisita(id){
+ const x=DB.visitas.find(v=>v.id==id);if(!x)return;
+ const t=(l,s)=>`<h3>${l}</h3><p class="txt">${esc(s)||'<span class="m">Não preenchido</span>'}</p>`;
+ abrirModal(`<h2>${esc(x.produtor_nome)}</h2><p class="info">${esc(x.cidade)} - ${esc(x.vendedor||'')}<br>Visita em <b>${br(x.data)}</b>${x.retorno?`<br>Retorno em <b>${br(x.retorno)}</b>`:''}</p>${t('Observação',x.obs)}${t('Oportunidades',x.oportunidades)}`);
 }
-const fecharModal = () => {
-  const m = $("#modal");
-  if (m) m.remove();
-};
-document.addEventListener("keydown", (e) => {
-  if (e.key == "Escape") fecharModal();
-});
+const fecharModal=()=>{const m=$('#modal');if(m)m.remove()};
+document.addEventListener('keydown',e=>{if(e.key=='Escape')fecharModal()});
 
 // Vínculo e-mail → vendedor (só o gestor vê esta aba): quem entra com o e-mail passa a cadastrar em nome do vendedor
-function gvend() {
-  const em = (n) =>
-    ((Auth.lista || []).find((x) => x.nome == n) || {}).email || "";
-  const ja = (n) => {
-    const e = em(n);
-    return !!e && DB.usuarios.some((u) => u.email == e.toLowerCase());
-  };
-  const lin = (n) =>
-    n == GESTOR_NOME
-      ? `<label>${esc(n)}<input value="Conta do gestor" disabled></label>`
-      : `<label>${esc(n)}<input type="email" data-nome="${esc(n)}" placeholder="e-mail do vendedor" value="${esc(em(n))}">${LOCAL || !em(n) ? "" : `<small>${ja(n) ? "já entrou no app" : "ainda não entrou no app (precisa entrar uma vez para receber clientes)"}</small>`}</label>`;
-  return box(
-    "Vínculo dos vendedores",
-    `<p class="m">Crie o login do vendedor no Firebase (Authentication > Adicionar usuário) e informe aqui o mesmo e-mail. Clientes, visitas e orçamentos que ele cadastrar ficam no nome dele; só ele e o gestor podem alterar. Para passar um cliente para outro vendedor, abra o cliente e troque o campo Vendedor responsável.</p><div id="gvl" class="g">${VEND.map(lin).join("")}</div><p><button class="pri" data-act="vsalvar">Salvar vínculos</button></p>`,
-  );
+function gvend(){
+ const em=n=>((Auth.lista||[]).find(x=>x.nome==n)||{}).email||'';
+ const ja=n=>{const e=em(n);return !!e&&DB.usuarios.some(u=>u.email==e.toLowerCase())};
+ const lin=n=>n==GESTOR_NOME?`<label>${esc(n)}<input value="Conta do gestor" disabled></label>`
+  :`<label>${esc(n)}<input type="email" data-nome="${esc(n)}" placeholder="e-mail do vendedor" value="${esc(em(n))}">${LOCAL||!em(n)?'':`<small>${ja(n)?'já entrou no app':'ainda não entrou no app (precisa entrar uma vez para receber clientes)'}</small>`}</label>`;
+ return box('Vínculo dos vendedores',`<p class="m">Crie o login do vendedor no Firebase (Authentication > Adicionar usuário) e informe aqui o mesmo e-mail. Clientes, visitas e orçamentos que ele cadastrar ficam no nome dele; só ele e o gestor podem alterar. Para passar um cliente para outro vendedor, abra o cliente e troque o campo Vendedor responsável.</p><div id="gvl" class="g">${VEND.map(lin).join('')}</div><p><button class="pri" data-act="vsalvar">Salvar vínculos</button></p>`);
 }
+
+// Marcas e listas: o gestor adiciona ou remove opções dos formulários (valem para todos os vendedores)
+const listasParaSalvar=()=>Object.fromEntries(Object.keys(LISTAS).map(k=>[k,editavel(k)]));
+function glistas(){
+ return box('Marcas e listas',`<p class="m">Adicione ou remova opções dos formulários. A DeLaval não pode ser removida. Cadastros antigos que já usam uma opção removida continuam mostrando o valor deles.</p>`)
+ +Object.keys(LISTAS).map(k=>box(LISTAS_NOME[k],`<div class="chips">${editavel(k).map(v=>`<span class="chip">${esc(v)}${(PROTEGIDOS[k]||[]).includes(v)?'<i title="Fixa">🔒</i>':`<button type="button" data-act="lrm" data-k="${k}" data-v="${esc(v)}" aria-label="Remover ${esc(v)}">×</button>`}</span>`).join('')}${FIXOS[k].map(v=>`<span class="chip fixo">${esc(v)}</span>`).join('')}</div><div class="bar2"><input id="li_${k}" placeholder="Nova opção" autocomplete="off"><button class="pri" data-act="lad" data-k="${k}">Adicionar</button></div>`)).join('');
+}
+document.addEventListener('toggle',e=>{if(e.target.id=='gchk')gopen=e.target.open},true);

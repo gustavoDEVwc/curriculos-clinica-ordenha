@@ -1,41 +1,39 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-    <title>Clínica da Ordenha</title>
-    <meta name="theme-color" content="#007aff">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icone-180.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Clínica Ordenha">
-    <link rel="stylesheet" href="estilo.css">
-    <script>try { var t = localStorage.getItem("clinica_ordenha_v1_tema"); if (t) document.documentElement.dataset.tema = t } catch (e) { }</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Clínica da Ordenha</title>
+<meta name="theme-color" content="#007aff">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Clínica Ordenha">
+<link rel="stylesheet" href="estilo.css">
+<script>try{var t=localStorage.getItem("clinica_ordenha_v1_tema");if(t)document.documentElement.dataset.tema=t}catch(e){}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
-
 <body>
-    <header>Clínica da Ordenha</header>
-    <nav id="nav"></nav>
-    <div id="menu" hidden></div>
-    <div id="notif" hidden></div>
-    <div id="offline" role="status" hidden></div>
-    <main id="app"></main>
-    <script src="config.js"></script>
-    <script src="dados.js"></script>
-    <script src="orcamentos.js"></script>
-    <script src="gestor.js"></script>
-    <script src="visitas.js"></script>
-    <script src="notificacoes.js"></script>
-    <script src="tema.js"></script>
-    <script src="app.js"></script>
-    <script>if ('serviceWorker' in navigator && location.protocol != 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }))</script>
+<header><span class="logo">Clínica da Ordenha</span><div id="acoes"></div></header>
+<nav id="nav"></nav>
+<div id="menu" hidden></div>
+<div id="notif" hidden></div>
+<div id="offline" role="status" hidden></div>
+<main id="app"></main>
+<script src="config.js"></script>
+<script src="dados.js"></script>
+<script src="orcamentos.js"></script>
+<script src="gestor.js"></script>
+<script src="visitas.js"></script>
+<script src="notificacoes.js"></script>
+<script src="tema.js"></script>
+<script src="app.js"></script>
+<script>if('serviceWorker' in navigator&&location.protocol!='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))</script>
 </body>
-
 </html>
