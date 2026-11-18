@@ -4,7 +4,7 @@ const OST=['Fechado','Não fechou','Aguardando'];
 const OF=[
  ['vendedor','Vendedor','s',1,VEND],['data','Data','d',1],['objetivo','Objetivo do orçamento','s',1,OBJ],
  ['produtos','Produtos','a',1],['valor','Valor (R$)','n',1],
- ['via_coamo','Orçamento via Coamo','s',0,YN],['fechamento','Fechamento','s',0,YN],['motivo','Não fechou, motivo?','t'],['retorno','Retorno do orçamento','d']];
+ ['via_coamo','Orçamento via Coamo','s',0,YN],['fechamento','Fechamento','s',0,YN],['data_fechamento','Data do fechamento','d'],['motivo','Não fechou, motivo?','t'],['retorno','Retorno do orçamento','d']];
 
 // Comissão sobre o fechamento:
 // Equipamento = 1,5% do valor · Produtos recorrentes = 3% do valor
@@ -36,7 +36,7 @@ function orcForm(){
  <datalist id="dl_prod">${P.map(c=>`<option value="${esc(lbl(c))}">`).join('')}</datalist>
  <p><button type="button" data-act="ocnovo">+ Cadastrar novo cliente</button></p></section>
  <section id="ores"><div class="g">${inp(F('produtos'),o.produtos)}${inp(F('valor'),o.valor)}${inp(F('via_coamo'),o.via_coamo)}</div><p id="oc" class="m"></p>
- <div class="g">${inp(F('fechamento'),o.fechamento)}${inp(F('motivo'),o.motivo)}${inp(F('retorno'),o.retorno)}</div></section>
+ <div class="g">${inp(F('fechamento'),o.fechamento)}${inp(F('data_fechamento'),o.data_fechamento)}${inp(F('motivo'),o.motivo)}${inp(F('retorno'),o.retorno)}</div></section>
  <div class="act"><button class="pri">Salvar orçamento</button><button type="button" data-act="oback">Cancelar</button>${o.id?'<button type="button" class="del" data-act="odel">Excluir</button>':''}</div></form>`;
 }
 
@@ -47,11 +47,15 @@ function osync(){
  $('#ores').hidden=!pr;
  [...$('#ores').querySelectorAll('input,select,textarea')].forEach(x=>x.disabled=!pr);
  ['motivo','retorno'].forEach(k=>{f[k].closest('label').style.display=nao?'':'none';if(!nao)f[k].value=''});
+ const sim=f.fechamento.value=='Sim'; // data do fechamento: só quando fechou (vale para o mês da comissão)
+ f.data_fechamento.closest('label').style.display=sim?'':'none';
+ if(sim&&!f.data_fechamento.value)f.data_fechamento.value=hoje();
+ if(!sim)f.data_fechamento.value='';
  $('#oc').innerHTML=ctxt(f.objetivo.value,+f.valor.value||0,f.via_coamo.value=='Sim');
 }
 function ocollect(){
  const f=$('#of').elements,g=k=>f[k].value.trim(),pr=prodSel(g('produtor'));
- return{id:orcCur.id,owner:orcCur.owner,vendedor:g('vendedor'),data:g('data'),objetivo:g('objetivo'),produtor_id:pr?pr.id:'',produtos:g('produtos'),valor:g('valor'),via_coamo:g('via_coamo'),fechamento:g('fechamento'),motivo:g('motivo'),retorno:g('retorno')};
+ return{id:orcCur.id,owner:orcCur.owner,vendedor:g('vendedor'),data:g('data'),objetivo:g('objetivo'),produtor_id:pr?pr.id:'',produtos:g('produtos'),valor:g('valor'),data_fechamento:g('data_fechamento'),via_coamo:g('via_coamo'),fechamento:g('fechamento'),motivo:g('motivo'),retorno:g('retorno')};
 }
 function salvarOrc(e){
  const f=e.target.elements,pr=prodSel(f.produtor.value);

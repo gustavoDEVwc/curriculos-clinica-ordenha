@@ -7,8 +7,11 @@ const FIREBASE_CONFIG={
   messagingSenderId:"200514396157",
   appId:"1:200514396157:web:ddfd8ea608d4a05b170394"
 };
-const GESTOR_NOME='Gustavo Wunder Costa'; // nome do gestor na lista de vendedores
-const GESTOR_UID='GDgIeOmpo3RRFjNdDhnXg6YdGXx1'; // somente este usuário vê tudo e abre a aba Gestor
+const GESTOR_NOME='Gustavo Wunder Costa'; // nome do gestor-vendedor na lista de vendedores
+// Contas de gestor (veem e alteram tudo e abrem a aba Gestor). "vendedor" = nome na lista de vendedores quando a conta também vende.
+const GESTORES=[
+ {email:'gustavo.wunder@hotmail.com',vendedor:GESTOR_NOME},  // gestor e vendedor
+ {email:'gestor.clinicadaordenha@gmail.com',vendedor:''}];  // só gestor (não cadastra em nome de vendedor)
 
 // Listas e campos do cadastro
 const KEY='clinica_ordenha_v1',YN=['Sim','Não'];

@@ -1,7 +1,7 @@
 // Service worker: guarda o app no aparelho para abrir sem internet.
 // Ao adicionar um arquivo novo ao app, inclua-o em APP e troque a VERSAO.
-const VERSAO='clinica-v2';
-const APP=['./','index.html','estilo.css','config.js','dados.js','orcamentos.js','gestor.js','visitas.js','notificacoes.js','tema.js','app.js','manifest.json','icone-192.png','icone-512.png','icone-180.png'];
+const VERSAO='clinica-v3';
+const APP=['./','index.html','estilo.css','config.js','dados.js','orcamentos.js','gestor.js','visitas.js','dashboard.js','notificacoes.js','tema.js','app.js','manifest.json','icone-192.png','icone-512.png','icone-180.png'];
 const CDN=[
  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js',

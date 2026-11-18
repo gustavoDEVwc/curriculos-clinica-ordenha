@@ -18,29 +18,28 @@ function gestor(){
  if(!Auth.gestor)return box('Acesso restrito','<p class="m">Esta área é exclusiva do gestor.</p>');
  const cid=[...new Set(DB.clientes.map(c=>c.cidade).filter(Boolean))].sort();
  const F=gt=='dash'?fsel('gfv','Vendedor',VEND,gf.v)+fsel('gfc','Cidade',cid,gf.c)+fsel('gfi','InService',YN,gf.i)+fsel('gfp','Prioridade',['A','B','C','D'],gf.p)
-  :gt=='vend'||gt=='listas'?'':gt=='orc'?ofiltros():fsel('gvv','Vendedor',VEND,gv.v)+`<label>De<input type="date" id="gde" value="${gv.de}"></label><label>Até<input type="date" id="gate" value="${gv.ate}"></label>`;
- return`<div class="bar2">${[['dash','Dashboard'],['vis','Visitas dos vendedores'],['orc','Orçamentos'],['vend','Vendedores'],['listas','Marcas e listas']].map(([k,l])=>`<button class="${gt==k?'pri':''}" data-gt="${k}">${l}</button>`).join('')}</div>${F?`<div class="box"><div class="g" id="gf">${F}</div></div>`:''}<div id="gbody"></div>`;
+  :gt=='vend'||gt=='listas'||gt=='metas'?'':gt=='orc'?ofiltros():fsel('gvv','Vendedor',VEND,gv.v)+`<label>De<input type="date" id="gde" value="${gv.de}"></label><label>Até<input type="date" id="gate" value="${gv.ate}"></label>`;
+ return`<div class="bar2">${[['dash','Dashboard'],['vis','Visitas dos vendedores'],['orc','Orçamentos'],['vend','Vendedores'],['listas','Marcas e listas'],['metas','Metas']].map(([k,l])=>`<button class="${gt==k?'pri':''}" data-gt="${k}">${l}</button>`).join('')}</div>${F?`<div class="box"><div class="g" id="gf">${F}</div></div>`:''}<div id="gbody"></div>`;
 }
 function gdraw(){
  charts.forEach(c=>c.destroy());charts=[];jobs=[];pn=0;
  if(typeof Chart=='undefined'){$('#gbody').innerHTML='<p class="m">Os gráficos não carregaram. Conecte-se à internet e recarregue a página.</p>';return}
  Chart.defaults.color=getComputedStyle(document.body).color;
- $('#gbody').innerHTML=gt=='dash'?gdash():gt=='orc'?gorc():gt=='vend'?gvend():gt=='listas'?glistas():gvis();
+ $('#gbody').innerHTML=gt=='dash'?gdash():gt=='orc'?gorc():gt=='vend'?gvend():gt=='listas'?glistas():gt=='metas'?gmetas():gvis();
  jobs.forEach(j=>j());
 }
 let GKEYS=[];
-function gdash(){
- const C=DB.clientes.filter(c=>(!gf.v||c.vendedor==gf.v)&&(!gf.c||c.cidade==gf.c)&&(!gf.i||c.inservice==gf.i)&&(!gf.p||c.prioridade==gf.p));
- if(!C.length)return'<p class="m">Nenhum cliente com esses filtros.</p>';
- const cap=c=>sum(c.resfriadores||[],r=>r.capacidade_l),kpi=(l,v)=>`<div class="kpi"><b>${fmt(v)}</b><small>${l}</small></div>`;
+const capDe=c=>sum(c.resfriadores||[],r=>r.capacidade_l);
+const kpisDe=C=>{const k=(l,v)=>`<div class="kpi"><b>${fmt(v)}</b><small>${l}</small></div>`;return`<div class="kpis">${k('clientes',C.length)}${k('vacas em ordenha',sum(C,c=>c.animais_ordenha))}${k('conjuntos de ordenha',sum(C,c=>c.unidades_ordenha))}${k('litros por dia',sum(C,c=>c.producao_dia))}${k('litros de resfriamento',sum(C,capDe))}</div>`};
+// Lista de gráficos de pizza: [chave, nome no filtro, função que desenha]. Usada pelo dashboard do gestor e do vendedor
+function construirGR(C,comVend){
  const by=(f,v)=>topN(Object.entries(grp(C,f)).map(([k,a])=>[k,sum(a,v)]).sort((x,y)=>y[1]-x[1])),reg=c=>c.regiao||c.cidade,R=C.flatMap(c=>c.resfriadores||[]);
- // [chave, nome no filtro, função que desenha]
- const GR=[
+ return[
   ['marcas','Marcas de ordenha',()=>pbox('Marcas de ordenha',pairs(C,c=>c.ord_marca))],
   ['vacas','Vacas em ordenha por região',()=>pbox('Vacas em ordenha por região',by(reg,c=>c.animais_ordenha))],
   ['litros','Litros por dia por região',()=>pbox('Litros por dia por região',by(reg,c=>c.producao_dia))],
-  ['resf_reg','Resfriamento instalado (L) por região',()=>pbox('Resfriamento instalado (L) por região',by(reg,cap))],
-  ['vendedor','Clientes por vendedor',()=>pbox('Clientes por vendedor',pairs(C,c=>c.vendedor))],
+  ['resf_reg','Resfriamento instalado (L) por região',()=>pbox('Resfriamento instalado (L) por região',by(reg,capDe))],
+  ...(comVend?[['vendedor','Clientes por vendedor',()=>pbox('Clientes por vendedor',pairs(C,c=>c.vendedor))]]:[]),
   ['prioridade','Prioridade',()=>pbox('Prioridade',pairs(C,c=>c.prioridade))],
   ['inservice','InService',()=>pbox('InService',pairs(C,c=>c.inservice))],
   ['coamo','Cooperado Coamo',()=>pbox('Cooperado Coamo',pairs(C,c=>c.cooperado_coamo))],
@@ -50,11 +49,20 @@ function gdash(){
   ['resfriador','Marcas de resfriador',()=>pbox('Marcas de resfriador',pairs(R,r=>r.marca))],
   ['conjunto','Marca do conjunto de ordenha',()=>pbox('Marca do conjunto de ordenha',pairs(C,c=>c.conjunto_marca))],
   ...PROD.map(([k,l])=>['p_'+k,l+' – marcas',()=>{const a=C.filter(c=>c['p_'+k+'_marca']);return pbox(`${l} (${a.filter(c=>c['p_'+k+'_nos']=='Sim').length} de ${a.length} compram de nós)`,pairs(a,c=>c['p_'+k+'_marca']))}])];
- GKEYS=GR.map(x=>x[0]);
+}
+// Caixa "Gráficos exibidos" com caixas de seleção
+function filtroGraficos(GR,sel,aberto,id,attr,aT,aN){
+ const on=x=>!sel||sel.has(x[0]);
+ return`<details id="${id}" class="box"${aberto?' open':''}><summary><b>Gráficos exibidos</b> (${GR.filter(on).length} de ${GR.length})</summary><p><button type="button" data-act="${aT}">Marcar todos</button> <button type="button" data-act="${aN}">Desmarcar todos</button></p><div class="chk">${GR.map(x=>`<label><input type="checkbox" ${attr}="${x[0]}"${on(x)?' checked':''}> ${esc(x[1])}</label>`).join('')}</div></details>`;
+}
+function gdash(){
+ const C=DB.clientes.filter(c=>(!gf.v||c.vendedor==gf.v)&&(!gf.c||c.cidade==gf.c)&&(!gf.i||c.inservice==gf.i)&&(!gf.p||c.prioridade==gf.p));
+ if(!C.length)return'<p class="m">Nenhum cliente com esses filtros.</p>';
+ const GR=construirGR(C,true);GKEYS=GR.map(x=>x[0]);
  const on=x=>!gsel||gsel.has(x[0]),V=GR.filter(on);
- const filtro=`<details id="gchk" class="box"${gopen?' open':''}><summary><b>Gráficos exibidos</b> (${V.length} de ${GR.length})</summary><p><button type="button" data-act="gtodos">Marcar todos</button> <button type="button" data-act="gnenhum">Desmarcar todos</button></p><div class="chk">${GR.map(x=>`<label><input type="checkbox" data-g="${x[0]}"${on(x)?' checked':''}> ${esc(x[1])}</label>`).join('')}</div></details>`;
- return`<div class="kpis">${kpi('clientes',C.length)}${kpi('vacas em ordenha',sum(C,c=>c.animais_ordenha))}${kpi('conjuntos de ordenha',sum(C,c=>c.unidades_ordenha))}${kpi('litros por dia',sum(C,c=>c.producao_dia))}${kpi('litros de resfriamento',sum(C,cap))}</div>`
- +filtro+(V.length?`<div class="two">${V.map(x=>x[2]()).join('')}</div>`:'<p class="m">Nenhum gráfico selecionado.</p>')
+ return kpisDe(C)+filtroGraficos(GR,gsel,gopen,'gchk','data-g','gtodos','gnenhum')
+ +(V.length?`<div class="two">${V.map(x=>x[2]()).join('')}</div>`:'<p class="m">Nenhum gráfico selecionado.</p>')
+ +box('Por vendedor',tbl(['Vendedor','Clientes','Vacas em ordenha','Conjuntos','Prioridade A'],Object.entries(grp(C,c=>c.vendedor)).sort().map(([k,a])=>[esc(k),a.length,fmt(sum(a,c=>c.animais_ordenha)),fmt(sum(a,c=>c.unidades_ordenha)),a.filter(c=>c.prioridade=='A').length])))
  +box('Retornos de visitas agendados',listaRet(retornos(C)));
 }
 function gvis(){
@@ -91,7 +99,7 @@ document.addEventListener('keydown',e=>{if(e.key=='Escape')fecharModal()});
 function gvend(){
  const em=n=>((Auth.lista||[]).find(x=>x.nome==n)||{}).email||'';
  const ja=n=>{const e=em(n);return !!e&&DB.usuarios.some(u=>u.email==e.toLowerCase())};
- const lin=n=>n==GESTOR_NOME?`<label>${esc(n)}<input value="Conta do gestor" disabled></label>`
+ const lin=n=>GESTORES.some(x=>x.vendedor==n)?`<label>${esc(n)}<input value="${esc(GESTORES.find(x=>x.vendedor==n).email)} (gestor)" disabled></label>`
   :`<label>${esc(n)}<input type="email" data-nome="${esc(n)}" placeholder="e-mail do vendedor" value="${esc(em(n))}">${LOCAL||!em(n)?'':`<small>${ja(n)?'já entrou no app':'ainda não entrou no app (precisa entrar uma vez para receber clientes)'}</small>`}</label>`;
  return box('Vínculo dos vendedores',`<p class="m">Crie o login do vendedor no Firebase (Authentication > Adicionar usuário) e informe aqui o mesmo e-mail. Clientes, visitas e orçamentos que ele cadastrar ficam no nome dele; só ele e o gestor podem alterar. Para passar um cliente para outro vendedor, abra o cliente e troque o campo Vendedor responsável.</p><div id="gvl" class="g">${VEND.map(lin).join('')}</div><p><button class="pri" data-act="vsalvar">Salvar vínculos</button></p>`);
 }
@@ -102,4 +110,12 @@ function glistas(){
  return box('Marcas e listas',`<p class="m">Adicione ou remova opções dos formulários. A DeLaval não pode ser removida. Cadastros antigos que já usam uma opção removida continuam mostrando o valor deles.</p>`)
  +Object.keys(LISTAS).map(k=>box(LISTAS_NOME[k],`<div class="chips">${editavel(k).map(v=>`<span class="chip">${esc(v)}${(PROTEGIDOS[k]||[]).includes(v)?'<i title="Fixa">🔒</i>':`<button type="button" data-act="lrm" data-k="${k}" data-v="${esc(v)}" aria-label="Remover ${esc(v)}">×</button>`}</span>`).join('')}${FIXOS[k].map(v=>`<span class="chip fixo">${esc(v)}</span>`).join('')}</div><div class="bar2"><input id="li_${k}" placeholder="Nova opção" autocomplete="off"><button class="pri" data-act="lad" data-k="${k}">Adicionar</button></div>`)).join('');
 }
-document.addEventListener('toggle',e=>{if(e.target.id=='gchk')gopen=e.target.open},true);
+document.addEventListener('toggle',e=>{if(e.target.id=='gchk')gopen=e.target.open;if(e.target.id=='dchk')dopen=e.target.open},true);
+
+// Metas mensais por vendedor (faturamento em R$ e número de visitas)
+function gmetas(){
+ const mes=gmes,cfg=METAS[mes]||METAS.padrao||{},padrao=!METAS[mes]&&!!METAS.padrao;
+ return box('Metas mensais',`<p class="m">Defina a meta de faturamento (R$) e a de visitas de cada vendedor. Escolha o mês e salve. "Salvar como padrão" vale para todos os meses que não tiverem meta própria.</p><div class="g"><label>Mês<input type="month" id="gmes" value="${mes}"></label></div>`)
+ +box(`Metas de ${nomeMes(mes)}${padrao?' (usando o padrão mensal)':''}`,`<div id="gml">${VEND.map(n=>`<div class="g"><label>${esc(n)} · faturamento (R$)<input type="number" min="0" step="any" inputmode="decimal" data-mn="${esc(n)}" data-mk="fat" value="${(cfg[n]||{}).fat??''}"></label><label>${esc(n)} · visitas (nº)<input type="number" min="0" step="1" inputmode="numeric" data-mn="${esc(n)}" data-mk="vis" value="${(cfg[n]||{}).vis??''}"></label></div>`).join('')}</div><p><button class="pri" data-act="msalvar">Salvar meta deste mês</button> <button data-act="mpadrao">Salvar como padrão mensal</button></p>`);
+}
+const coletarMetas=()=>{const o={};document.querySelectorAll('#gml [data-mn]').forEach(i=>{const v=i.value.trim();if(v==='')return;(o[i.dataset.mn]=o[i.dataset.mn]||{})[i.dataset.mk]=+v});return o};

@@ -9,7 +9,7 @@ const br=d=>d?d.split('-').reverse().join('/'):'';
 const hoje=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 function semana(){const d=new Date(hoje()+'T12:00');d.setDate(d.getDate()-(d.getDay()+6)%7);const a=d.toISOString().slice(0,10);d.setDate(d.getDate()+5);return{v:'',de:a,ate:d.toISOString().slice(0,10)}}
 
-let cur=null,tab='cli',q='',back=null,orcCur=null,orcDraft=null,vcur=null,lf='todos',gsel=null,gopen=false,vfd='',vfr='',vag=null,gt='dash',gf={v:'',c:'',i:'',p:''},gv=semana(),go={v:'',s:'',o:'',de:'',ate:''},charts=[],jobs=[];
+let cur=null,tab='cli',q='',back=null,orcCur=null,orcDraft=null,vcur=null,lf='todos',gsel=null,gopen=false,dt='resumo',dv='',dmes=hoje().slice(0,7),dprod='',dsel=null,dopen=false,gmes=hoje().slice(0,7),vfd='',vfr='',vag=null,gt='dash',gf={v:'',c:'',i:'',p:''},gv=semana(),go={v:'',s:'',o:'',de:'',ate:''},charts=[],jobs=[];
 
 function inp(f,v,list){
  const[k,l,t,r,o]=f,at=list?`data-k="${k}"`:`name="${k}"`,rq=r?' required':'';
@@ -42,7 +42,7 @@ function sync(){
 }
 
 function cards(){
- const t=q.toLowerCase(),L=DB.clientes.filter(c=>(lf=='todos'||c.owner==Auth.user.uid)&&[c.nome,c.cidade,c.propriedade,c.vendedor].join(' ').toLowerCase().includes(t)).sort((a,b)=>a.nome.localeCompare(b.nome));
+ const t=q.toLowerCase(),L=DB.clientes.filter(c=>(lf=='todos'||c.vendedor==Auth.vendedor)&&[c.nome,c.cidade,c.propriedade,c.vendedor].join(' ').toLowerCase().includes(t)).sort((a,b)=>a.nome.localeCompare(b.nome));
  return L.length?L.map(c=>`<div class="card" data-id="${c.id}"><span><b>${esc(c.nome)}</b> <span class="pill">${esc(c.prioridade)}</span></span><small>${esc(c.cidade)} · ${esc(c.ord_marca)} · ${esc(c.unidades_ordenha)} conjuntos · ${esc(c.animais_ordenha)} vacas${c.vendedor?' · '+esc(c.vendedor):''}</small></div>`).join(''):'<p class="m">Nenhum cliente encontrado. Toque em “Novo cliente” para começar.</p>';
 }
 const list=()=>`<div class="bar2"><input id="q" placeholder="Buscar por nome, cidade ou propriedade" value="${esc(q)}"><button class="pri" data-act="new">Novo cliente</button></div><div class="bar2"><button class="${lf=='todos'?'pri':''}" data-lf="todos">Todos os clientes</button><button class="${lf=='meus'?'pri':''}" data-lf="meus">Meus clientes</button></div><div class="cards" id="cards">${cards()}</div>`;
@@ -51,22 +51,6 @@ const tbl=(h,rows)=>`<div class="sc"><table><thead><tr>${h.map(x=>`<th>${x}</th>
 const bars=(a,f)=>{const m=Object.entries(grp(a,f)).map(([k,v])=>[k,v.length]).sort((x,y)=>y[1]-x[1]);if(!m.length)return'<p class="m">Sem dados.</p>';const mx=m[0][1];return m.map(([k,v])=>`<div class="br"><span>${esc(k)}</span><i style="--w:${v/mx*100}%"></i><b>${v}</b></div>`).join('')};
 const box=(t,h)=>`<div class="box"><h2>${t}</h2>${h}</div>`;
 
-function dash(){
- const C=meusClientes();if(!C.length)return'<p class="m">Cadastre clientes para ver os indicadores.</p>';
- const cap=c=>sum(c.resfriadores||[],r=>r.capacidade_l),today=new Date().toISOString().slice(0,10);
- const kpi=(l,v)=>`<div class="kpi"><b>${fmt(v)}</b><small>${l}</small></div>`;
- const marcas=[...new Set(C.map(c=>c.ord_marca).filter(Boolean))].sort();
- const dl=a=>Math.round(100*a.filter(c=>c.ord_marca=='DeLaval').length/a.length)+'%';
-
- const prod=PROD.map(([k,l])=>{const a=C.filter(c=>c['p_'+k+'_marca']);return box(l,`<p class="m">${a.filter(c=>c['p_'+k+'_nos']=='Sim').length} de ${a.length} compram de nós</p>`+bars(a,c=>c['p_'+k+'_marca']))}).join('');
- return`<div class="kpis">${kpi('clientes',C.length)}${kpi('vacas em ordenha',sum(C,c=>c.animais_ordenha))}${kpi('conjuntos de ordenha',sum(C,c=>c.unidades_ordenha))}${kpi('litros por dia',sum(C,c=>c.producao_dia))}${kpi('litros de resfriamento',sum(C,cap))}</div>`
- +box('Marcas de ordenha por cidade (nº de clientes)',tbl(['Cidade',...marcas,'Total','Conjuntos','% DeLaval'],Object.entries(grp(C,c=>c.cidade)).sort().map(([k,a])=>[esc(k),...marcas.map(m=>a.filter(c=>c.ord_marca==m).length||''),a.length,fmt(sum(a,c=>c.unidades_ordenha)),dl(a)])))
- +box('Por região (ou cidade, quando sem região)',tbl(['Região','Clientes','Vacas em ordenha','Litros/dia','Resfriamento (L)'],Object.entries(grp(C,c=>c.regiao||c.cidade)).sort().map(([k,a])=>[esc(k),a.length,fmt(sum(a,c=>c.animais_ordenha)),fmt(sum(a,c=>c.producao_dia)),fmt(sum(a,cap))])))
- +box('Por vendedor',tbl(['Vendedor','Clientes','Vacas em ordenha','Conjuntos','Prioridade A'],Object.entries(grp(C,c=>c.vendedor)).sort().map(([k,a])=>[esc(k),a.length,fmt(sum(a,c=>c.animais_ordenha)),fmt(sum(a,c=>c.unidades_ordenha)),a.filter(c=>c.prioridade=='A').length])))
- +`<div class="two">${box('Prioridade',bars(C,c=>c.prioridade))}${box('Perfil',bars(C,c=>c.perfil))}${box('Tipo de barracão',bars(C,c=>c.tipo_barracao))}${box('Tipo de equipamento',bars(C,c=>c.tipo_equipamento))}${box('Marcas de resfriador',bars(C.flatMap(c=>c.resfriadores||[]),r=>r.marca))}${box('Marca do conjunto de ordenha',bars(C,c=>c.conjunto_marca))}</div>`
- +`<div class="two">${prod}</div>`
- +box('Retornos de visitas agendados',listaRet(retornos(C)));
-}
 
 const exp=()=>box('Exportar dados',`<p>Gera um arquivo Excel (.xlsx) com quatro abas: <b>clientes</b> (uma linha por cliente), <b>resfriadores</b> e <b>visitas</b> (ligadas por <b>id_cliente</b>) e <b>orcamentos</b>. Os cabeçalhos são os nomes dos campos do banco. Cada vendedor exporta só os próprios dados; o gestor exporta tudo.</p><p><button class="pri" data-act="xlsx">Baixar Excel (.xlsx)</button></p><h2>Backup</h2><p class="m">Os dados ficam salvos neste navegador. Baixe um backup de vez em quando.</p><p><button data-act="json">Baixar backup (.json)</button></p><label>Restaurar backup<input type="file" id="imp" accept=".json"></label>`);
 
@@ -81,7 +65,7 @@ function xlsx(){
  {const[h,d]=sub('resfriadores');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d,{header:h}),'resfriadores')}
  const VH=['id','cliente_id','produtor_nome','cidade','vendedor','data','obs','oportunidades','retorno'];
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DB.visitas.map(v=>Object.fromEntries(VH.map(k=>[k,v[k]??'']))),{header:VH}),'visitas');
- const OH=['id','vendedor','data','objetivo','produtor_id','produtor_nome','cidade','produtos','valor','via_coamo','comissao_valor','recebimento_clinica','fechamento','motivo','retorno'];
+ const OH=['id','vendedor','data','objetivo','produtor_id','produtor_nome','cidade','produtos','valor','via_coamo','comissao_valor','recebimento_clinica','fechamento','data_fechamento','motivo','retorno'];
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DB.orcamentos.map(o=>Object.fromEntries(OH.map(k=>[k,['valor','comissao_valor','recebimento_clinica'].includes(k)?+o[k]||0:o[k]??'']))),{header:OH}),'orcamentos');
  XLSX.writeFile(wb,'clinica_ordenha_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
@@ -110,6 +94,7 @@ function render(keep){
  if(orcCur&&tab=='orc')osync();
  if(vcur&&tab=='vis')vsync();
  if(tab=='ges'&&Auth.gestor)gdraw();
+ if(tab=='dash')ddraw();
  if(!keep)scrollTo(0,0);
 }
 
@@ -117,9 +102,9 @@ document.addEventListener('click',e=>{
  if(!e.target.closest('.hamb')){const mn=$('#menu');if(mn)mn.hidden=true}
  if(!e.target.closest('[data-dia]'))hideTip();
  if(!e.target.closest('.bell,#notif'))$('#notif').hidden=true;
- const t=e.target.closest('[data-tab],[data-act],[data-id],[data-gt],[data-oid],[data-vi],[data-vk],[data-ok],[data-dia],[data-nt],[data-lf]');if(!t)return;
+ const t=e.target.closest('[data-tab],[data-act],[data-id],[data-gt],[data-oid],[data-vi],[data-vk],[data-ok],[data-dia],[data-nt],[data-lf],[data-dt]');if(!t)return;
  const d=t.dataset;
- if(d.tab){if(d.tab=='ges'){gsel=null;gopen=false}tab=d.tab;cur=null;orcCur=null;vcur=null;vag=null;back=null;render()}
+ if(d.tab){if(d.tab=='ges'){gsel=null;gopen=false}if(d.tab=='dash'){dsel=null;dopen=false;dt='resumo';dmes=hoje().slice(0,7);dprod=''}tab=d.tab;cur=null;orcCur=null;vcur=null;vag=null;back=null;render()}
  else if(d.oid){orcCur=DB.orcamentos.find(o=>o.id==d.oid);render()}
  else if(d.gt){gt=d.gt;if(gt=='dash')gsel=null;render()}
  else if(d.id){cur=DB.clientes.find(c=>c.id==d.id);render()}
@@ -150,6 +135,7 @@ document.addEventListener('click',e=>{
  else if(d.act=='notif'){const p=$('#notif');p.innerHTML=notifHTML();p.style.top=$('header').getBoundingClientRect().bottom+'px';p.hidden=!p.hidden}
  else if(d.act=='nlidas'){marcar(notificacoes().map(x=>x.k));$('#notif').innerHTML=notifHTML();refBadge()}
  else if(d.lf){lf=d.lf;render(true)}
+ else if(d.dt){dt=d.dt;if(dt=='resumo')dsel=null;render(true)}
  else if(d.ok)abrirOrc(d.ok);
  else if(d.dia)tipDia(t);
  else if(d.act=='vagenda'){vag=hoje().slice(0,7);render()}
@@ -165,6 +151,9 @@ document.addEventListener('click',e=>{
   if(new Set(em).size<em.length)return alert('Há e-mails repetidos.');
   Dados.salvarConfig(lista);alert('Vínculos salvos.');
  }
+ else if(d.act=='dtodos'){dsel=null;ddraw()}
+ else if(d.act=='dnenhum'){dsel=new Set();ddraw()}
+ else if(d.act=='msalvar'||d.act=='mpadrao'){const o=coletarMetas();if(d.act=='msalvar')METAS[gmes]=o;else METAS.padrao=o;Dados.salvarMetas(METAS);alert('Metas salvas.');gdraw()}
  else if(d.act=='gtodos'){gsel=null;gdraw()}
  else if(d.act=='gnenhum'){gsel=new Set();gdraw()}
  else if(d.act=='lad'){
@@ -184,6 +173,11 @@ document.addEventListener('input',e=>{if(e.target.id=='q'){q=e.target.value;$('#
 document.addEventListener('change',e=>{
  if(e.target.closest('#f'))sync();
  if(e.target.closest('#of'))osync();
+ if(e.target.id=='dvsel'){dv=e.target.value;ddraw()}
+ if(e.target.id=='dmes'&&e.target.value){dmes=e.target.value;ddraw()}
+ if(e.target.id=='dprod'){dprod=e.target.value;ddraw()}
+ if(e.target.id=='gmes'&&e.target.value){gmes=e.target.value;gdraw()}
+ if(e.target.matches('[data-d]')){if(!dsel)dsel=new Set(DKEYS);e.target.checked?dsel.add(e.target.dataset.d):dsel.delete(e.target.dataset.d);ddraw()}
  if(e.target.matches('[data-g]')){if(!gsel)gsel=new Set(GKEYS);e.target.checked?gsel.add(e.target.dataset.g):gsel.delete(e.target.dataset.g);gdraw()}
  if(e.target.closest('#vf'))vsync();
  if(e.target.closest('#vfl')){if(e.target.id=='vfd')vfd=e.target.value;else vfr=e.target.value;render(true)}

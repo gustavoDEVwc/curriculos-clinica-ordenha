@@ -121,3 +121,13 @@ details.box summary{cursor:pointer;color:var(--t);padding:2px 0}
 .chip.fixo{opacity:.6;padding-right:10px}
 .chip i{font-style:normal;font-size:12px}
 .chip button{width:24px;height:24px;padding:0;border:0;border-radius:50%;background:none;color:var(--w);font-size:18px;line-height:1}
+.destaque{margin-bottom:12px;padding:20px;border-radius:16px;color:#fff;background:linear-gradient(135deg,var(--a),var(--dl))}
+.destaque small{display:block;font-size:14px;opacity:.92}
+.destaque b{display:block;margin:4px 0;font-size:40px;line-height:1.1}
+.destaque span{font-size:13px;opacity:.92}
+.mh{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 8px;margin-bottom:8px}
+.mh b{font-size:20px}.mh span{color:var(--m);font-size:14px}
+.prog{height:14px;overflow:hidden;border-radius:7px;background:var(--b)}
+.prog i{display:block;height:100%;border-radius:7px;background:var(--a);transition:width .6s}
+.prog.ok i{background:#34c759}
+.parab{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#34c759;color:#000;font-weight:700}

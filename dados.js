@@ -8,10 +8,12 @@ const Rede={pend:{clientes:false,visitas:false,orcamentos:false}}; // alteraçõ
 let fbdb=null,unsubs=[],migrou=false;
 
 // Quem é o vendedor deste login: o gestor é o GESTOR_NOME; os demais vêm do vínculo e-mail → nome (aba Gestor > Vendedores)
+const gestorDe=u=>GESTORES.find(x=>x.email==((u&&u.email)||'').toLowerCase());
 const calcVend=()=>{
- const em=Auth.user?(Auth.user.email||'').toLowerCase():'';
- Auth.vendedor=!Auth.user?'':Auth.gestor?GESTOR_NOME:((Auth.lista||[]).find(x=>(x.email||'').toLowerCase()==em)||{}).nome||'';
+ const em=Auth.user?(Auth.user.email||'').toLowerCase():'',g=gestorDe(Auth.user);
+ Auth.vendedor=!Auth.user?'':g?g.vendedor:((Auth.lista||[]).find(x=>(x.email||'').toLowerCase()==em)||{}).nome||'';
 };
+let METAS={}; // metas mensais: {'2026-11':{'Nome':{fat,vis}}, padrao:{...}}
 
 const Dados={
  // aoMudar('auth') = login/logout; aoMudar('clientes'|'visitas'|'orcamentos'|'config', soMeta) = dados novos
@@ -21,7 +23,7 @@ const Dados={
    COLECOES.forEach(k=>DB[k]=DB[k]||[]);
    try{Auth.lista=JSON.parse(localStorage.getItem(KEY+'_vend')||'[]')}catch(e){}
    try{aplicarListas(JSON.parse(localStorage.getItem(KEY+'_listas')||'null'))}catch(e){aplicarListas(null)}
-   Auth.pronto=true;Auth.user={uid:'local',email:'local'};Auth.gestor=true;calcVend();this.migrar();aoMudar('auth');return;
+   Auth.pronto=true;Auth.user={uid:'local',email:'local'};Auth.gestor=true;calcVend();Auth.vendedor=GESTOR_NOME;try{METAS=JSON.parse(localStorage.getItem(KEY+'_metas')||'{}')}catch(e){}this.migrar();aoMudar('auth');return;
   }
   if(typeof firebase=='undefined'){Auth.pronto=true;Auth.erro=true;aoMudar('auth');return}
   firebase.initializeApp(FIREBASE_CONFIG);
@@ -29,7 +31,7 @@ const Dados={
   fbdb.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('Cópia offline indisponível:',e.code)); // funciona sem sinal e sincroniza depois
   firebase.auth().onAuthStateChanged(u=>{
    unsubs.forEach(f=>f());unsubs=[];COLECOES.forEach(k=>{DB[k]=[];Rede.pend[k]=false});DB.usuarios=[];migrou=false;aplicarListas(null);Auth.lista=[];
-   Auth.pronto=true;Auth.user=u;Auth.gestor=!!u&&u.uid==GESTOR_UID;calcVend();
+   Auth.pronto=true;Auth.user=u;Auth.gestor=!!gestorDe(u);calcVend();METAS={};
    if(u){
     const visto={};
     COLECOES.forEach(col=>{
@@ -46,6 +48,7 @@ const Dados={
     // cada login registra o próprio e-mail; o gestor lê a lista para saber o uid de cada vendedor
     fbdb.collection('usuarios').doc(u.uid).set({email:(u.email||'').toLowerCase()}).catch(()=>{});
     if(Auth.gestor)unsubs.push(fbdb.collection('usuarios').onSnapshot(s=>{DB.usuarios=s.docs.map(x=>({...x.data(),id:x.id}));aoMudar('usuarios',true)},e=>console.error('usuarios',e)));
+    unsubs.push(fbdb.collection('config').doc('metas').onSnapshot(s=>{METAS=s.data()||{};aoMudar('config')},e=>console.error('metas',e)));
     unsubs.push(fbdb.collection('config').doc('listas').onSnapshot(s=>{aplicarListas(s.data());aoMudar('config')},e=>console.error('listas',e)));
     unsubs.push(fbdb.collection('config').doc('vendedores').onSnapshot(s=>{Auth.lista=(s.data()||{}).lista||[];calcVend();aoMudar('config')},e=>console.error('config',e)));
    }
@@ -64,6 +67,11 @@ const Dados={
   DB[col]=DB[col].filter(x=>x.id!=id);
   if(LOCAL)return localStorage.setItem(KEY,JSON.stringify(DB));
   fbdb.collection(col).doc(id).delete().catch(e=>alert('Não foi possível excluir: '+e.message));
+ },
+ salvarMetas(o){ // metas mensais de faturamento e visitas (só o gestor grava)
+  METAS=o;
+  if(LOCAL)return localStorage.setItem(KEY+'_metas',JSON.stringify(o));
+  fbdb.collection('config').doc('metas').set(o).catch(e=>alert('Não foi possível salvar: '+e.message));
  },
  salvarListas(o){ // listas de marcas e tipos (só o gestor grava)
   if(LOCAL)return localStorage.setItem(KEY+'_listas',JSON.stringify(o));
@@ -91,13 +99,12 @@ const podeEditar=c=>!c.id||Auth.gestor||c.owner==Auth.user.uid;
 const ultVisita=c=>DB.visitas.filter(v=>v.cliente_id==c.id).map(v=>v.data).filter(Boolean).sort().pop()||'';
 const exigeVinculo=()=>{
  if(Auth.vendedor)return true;
- alert('Seu e-mail ainda não está vinculado a um vendedor. Peça ao gestor para vincular em Gestor > Vendedores.');
+ alert(Auth.gestor?'Esta conta é só de gestor e não cadastra clientes, visitas ou orçamentos. Para cadastrar, use uma conta de vendedor.':'Seu e-mail ainda não está vinculado a um vendedor. Peça ao gestor para vincular em Gestor > Vendedores.');
  return false;
 };
 // uid do login de um vendedor (para transferir clientes): vem do vínculo de e-mail e do registro feito no primeiro login dele
 const uidVendedor=nome=>{
- if(nome==GESTOR_NOME)return LOCAL?'local':GESTOR_UID;
- if(LOCAL)return 'local-'+nome;
- const e=((Auth.lista||[]).find(x=>x.nome==nome)||{}).email,u=e&&DB.usuarios.find(x=>x.email==e.toLowerCase());
+ if(LOCAL)return nome==GESTOR_NOME?'local':'local-'+nome;
+ const e=((GESTORES.find(g=>g.vendedor==nome)||(Auth.lista||[]).find(x=>x.nome==nome)||{}).email||'').toLowerCase(),u=e&&DB.usuarios.find(x=>x.email==e);
  return u?u.id:'';
 };
